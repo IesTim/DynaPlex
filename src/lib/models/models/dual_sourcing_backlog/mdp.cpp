@@ -30,6 +30,10 @@ namespace DynaPlex::Models {
             config.Get("max_c", max_c);
             config.Get("min_mu", min_mu);
             config.Get("max_mu", max_mu);
+            if (config.HasKey("action_representation"))
+                config.Get("action_representation", action_representation);
+            else
+                action_representation = "flat_joint";
 
             // checks:
             if (K < 2)
@@ -76,9 +80,25 @@ namespace DynaPlex::Models {
 
         DynaPlex::VarGroup MDP::GetStaticInfo() const {
             VarGroup vars;
+
+            int64_t valid_actions;
+            if (action_representation == "sequential")
+                valid_actions = MaxOrderSize + 1;
+            else {
+                valid_actions = 1;
+                for (int64_t k = 0; k < K; k++)
+                    valid_actions *= (MaxOrderSize + 1);
+            }
+
             vars.Add("valid_actions", MaxOrderSize + 1);
             vars.Add("discount_factor", 1.0);
             vars.Add("horizon_type", "infinite");
+            
+            VarGroup diagnostics{};
+            diagnostics.Add("action_representation", action_representation);
+            diagnostics.Add("MaxOrderSize", MaxOrderSize);
+            vars.Add("diagnostics", diagnostics);
+            
             return vars;
         }
 
@@ -98,11 +118,52 @@ namespace DynaPlex::Models {
         }
 
         double MDP::ModifyStateWithAction(State& state, int64_t action) const {
-            state.cat = StateCategory::AwaitEvent();
+            std::vector<int64_t> q(K, 0);
+
+            if (action_representation == "sequential") {
+                int64_t k = state.current_source;
+                q[k] = action;
+            
+                state.current_source++;
+                if (state.current_source < K) {
+                    state.cat = StateCategory::AwaitAction();
+                    double cost = state.c[k] * q[k];
+                    state.state_vector.at(state.l[k] - 1) += q[k];
+                    state.total_inv += q[k];
+                    return cost;
+                } else {
+                    state.current_source = 0;
+                    state.cat = StateCategory::AwaitEvent();
+                    double cost = state.c[k] * q[k];
+                    state.state_vector.at(state.l[k] - 1) += q[k];
+                    state.total_inv += q[k];
+                    return cost;
+                }
+            } else {
+                int64_t m_plus_1 = MaxOrderSize + 1;
+                int64_t remaining = action;
+                for (int64_t k = K - 1; k >= 0; k--) {
+                    q[k] = remaining % m_plus_1;
+                    remaining /= m_plus_1;
+                }
+
+                double cost = 0.0;
+                for (int64_t k = 0; k < K; k++) {
+                    cost += state.c[k] * q[k];
+                    state.state_vector.at(state.l[k] - 1) += q[k];
+                    state.total_inv += q[k];
+                }
+
+                state.cat = StateCategory::AwaitEvent();
+                return cost;
+            }
+
+
             return 0.0;
         }
 
         double MDP::ModifyStateWithEvent(State& state, const Event& event) const {
+            state.current_source = 0;
             state.cat = StateCategory::AwaitAction();
             return 0.0;
         }
@@ -190,7 +251,7 @@ namespace DynaPlex::Models {
             state.state_vector = queue;
             state.total_inv = 0;
 
-            state.current_source = -1;
+            state.current_source = 0;
             state.pending_orders.resize(K, 0);
 
             state.cat = StateCategory::AwaitAction();

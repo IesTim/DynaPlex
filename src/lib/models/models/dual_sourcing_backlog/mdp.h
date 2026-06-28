@@ -54,6 +54,7 @@ namespace DynaPlex::Models {
             void GetFeatures(const State&, DynaPlex::Features&) const;
             explicit MDP(const DynaPlex::VarGroup&);
             void RegisterPolicies(DynaPlex::Erasure::PolicyRegistry<MDP>&) const;
+            std::string action_representation;  // "flat_joint", "multi_discrete", "sequential"
         };
     }
 }
