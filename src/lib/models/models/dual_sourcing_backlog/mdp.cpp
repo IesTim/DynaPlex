@@ -1,0 +1,173 @@
+#include "mdp.h"
+#include "dynaplex/erasure/mdpregistrar.h"
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
+
+namespace DynaPlex::Models {
+    namespace dual_sourcing_backlog {
+
+        void Register(DynaPlex::Registry& registry) {
+            DynaPlex::Erasure::MDPRegistrar<MDP>::RegisterModel(
+                "dual_sourcing_backlog",
+                "Dual sourcing inventory control with backlogging, K sources, zero-shot generalisation via TED framework.",
+                registry);
+        }
+
+        void MDP::RegisterPolicies(DynaPlex::Erasure::PolicyRegistry<MDP>& registry) const {
+
+        }
+
+        MDP::MDP(const DynaPlex::VarGroup& config) {
+            config.Get("K", K);
+            config.Get("l_min", l_min);
+            config.Get("l_max", l_max);
+            config.Get("min_h", min_h);
+            config.Get("max_h", max_h);
+            config.Get("min_b", min_b);
+            config.Get("max_b", max_b);
+            config.Get("min_c", min_c);
+            config.Get("max_c", max_c);
+            config.Get("min_mu", min_mu);
+            config.Get("max_mu", max_mu);
+
+            // checks:
+            if (K < 2)
+                throw DynaPlex::Error("dual_sourcing_backlog: K must be >= 2.");
+            if (l_min < 1)
+                throw DynaPlex::Error("dual_sourcing_backlog: l_min must be >= 1.");
+            if (l_max <= l_min)
+                throw DynaPlex::Error("dual_sourcing_backlog: l_max must be > l_min.");
+            if ((int64_t)min_c.size() != K || (int64_t)max_c.size() != K)
+                throw DynaPlex::Error("dual_sourcing_backlog: min_c and max_c must have length K.");
+            if (min_mu <= 0.0)
+                throw DynaPlex::Error("dual_sourcing_backlog: min_mu must be > 0.");
+
+            max_lr = l_max;
+            
+
+            // order quantity upperbound on m, now via news vendor fractile
+            double worst_sigma = max_mu * 2.0;
+            DiscreteDist dist = DiscreteDist::GetAdanEenigeResingDist(max_mu, worst_sigma);
+            MaxOrderSize = dist.Fractile(max_b / (max_b + min_h));
+
+            // Create all K sized subsets
+            std::vector<int64_t> current_tuple;
+            std::function<void(int64_t, int64_t)> generate = [&](int64_t start, int64_t depth) {
+                if (depth == K) {
+                    valid_lead_time_tuples.push_back(current_tuple);
+                    return;
+                }
+                for (int64_t l = start; l <= l_max - (K - depth - 1); l++) {
+                    current_tuple.push_back(l);
+                    generate(l + 1, depth + 1);
+                    current_tuple.pop_back();
+                }
+            };
+            generate(l_min, 0);
+
+            if (valid_lead_time_tuples.empty())
+                throw DynaPlex::Error(
+                    "dual_sourcing_backlog: No valude lead time tupples found. Check that l_max - l_min > = K - 1."
+                );
+        }
+
+        DynaPlex::VarGroup MDP::GetStaticInfo() const {
+            VarGroup vars;
+            vars.Add("valid_actions", MaxOrderSize + 1);
+            vars.Add("discount_factor", 1.0);
+            vars.Add("horizon_type", "infinite");
+            return vars;
+        }
+
+        DynaPlex::StateCategory MDP::GetStateCategory(const State& state) const {
+            return state.cat;
+        }
+
+        bool MDP::IsAllowedAction(const State& state, int64_t action) const {
+            return true;
+        }
+
+        MDP::Event MDP::GetEvent(const State& state, DynaPlex::RNG& rng) const {
+            return 0;
+        }
+
+        double MDP::ModifyStateWithAction(State& state, int64_t action) const {
+            state.cat = StateCategory::AwaitEvent();
+            return 0.0;
+        }
+
+        double MDP::ModifyStateWithEvent(State& state, const Event& event) const {
+            state.cat = StateCategory::AwaitAction();
+            return 0.0;
+        }
+
+        void MDP::GetFeatures(const State& state, DynaPlex::Features& features) const {
+            features.Add(0.0);
+        }
+
+        MDP::State MDP::GetInitialState(DynaPlex::RNG& rng) const {
+            State state{};
+            state.cat = StateCategory::AwaitAction();
+            state.total_inv = 0;
+            state.K = K;
+            state.MaxOrderSize = MaxOrderSize;
+            state.current_source = -1;
+            state.pending_orders.resize(K, 0);
+            state.l = valid_lead_time_tuples[0];
+            state.c = min_c;
+            state.mu = min_mu;
+            state.sigma = min_mu;
+            state.h = min_h;
+            state.b = min_b;
+            state.demand_min = 0;
+            state.demand_cdf = {1, 0};
+            auto queue = Queue<int64_t>{};
+            queue.reserve(max_lr);
+            for (int64_t i = 0; i < max_lr; i++)
+                queue.push_back(0);
+            state.state_vector = queue;
+            return state;
+        }
+
+        MDP::State MDP::GetState(const DynaPlex::VarGroup& vars) const {
+            State state{};
+            vars.Get("cat", state.cat);
+            vars.Get("state_vector", state.state_vector);
+            vars.Get("total_inv", state.total_inv);
+            vars.Get("K", state.K);
+            vars.Get("l", state.l);
+            vars.Get("c", state.c);
+            vars.Get("mu", state.mu);
+            vars.Get("sigma", state.sigma);
+            vars.Get("h", state.h);
+            vars.Get("b", state.b);
+            vars.Get("demand_cdf", state.demand_cdf);
+            vars.Get("demand_min", state.demand_min);
+            vars.Get("current_source", state.current_source);
+            vars.Get("pending_orders", state.pending_orders);
+            vars.Get("MaxOrderSize", state.MaxOrderSize);
+            return state;
+        }
+
+        DynaPlex::VarGroup MDP::State::ToVarGroup() const {
+            DynaPlex::VarGroup vars;
+            vars.Add("cat", cat);
+            vars.Add("state_vector", state_vector);
+            vars.Add("total_inv", total_inv);
+            vars.Add("K", K);
+            vars.Add("l", l);
+            vars.Add("c", c);
+            vars.Add("mu", mu);
+            vars.Add("sigma", sigma);
+            vars.Add("h", h);
+            vars.Add("b", b);
+            vars.Add("demand_cdf", demand_cdf);
+            vars.Add("demand_min", demand_min);
+            vars.Add("current_source", current_source);
+            vars.Add("pending_orders", pending_orders);
+            vars.Add("MaxOrderSize", MaxOrderSize);
+            return vars;
+        }
+    }
+}

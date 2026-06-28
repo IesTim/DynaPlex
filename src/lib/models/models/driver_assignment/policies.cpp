@@ -1,6 +1,7 @@
 #include "policies.h"
 #include "mdp.h"
 #include "dynaplex/error.h"
+#include <algorithm>
 namespace DynaPlex::Models {
 	namespace driver_assignment /*keep this namespace name in line with the name space in which the mdp corresponding to this policy is defined*/
 	{

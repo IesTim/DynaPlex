@@ -24,6 +24,9 @@ namespace DynaPlex::Models {
 	namespace driver_assignment {
 		void Register(DynaPlex::Registry&);
 	}
+	namespace dual_sourcing_backlog {
+		void Register(DynaPlex::Registry&);
+	}
 	void RegistrationManager::RegisterAll(DynaPlex::Registry& registry) {
 		lost_sales::Register(registry);
 		perishable_systems::Register(registry);
@@ -32,5 +35,6 @@ namespace DynaPlex::Models {
 		random_leadtimes::Register(registry);
 		multi_item_sla::Register(registry);
 		driver_assignment::Register(registry);
+		dual_sourcing_backlog::Register(registry);
 	}
 }
