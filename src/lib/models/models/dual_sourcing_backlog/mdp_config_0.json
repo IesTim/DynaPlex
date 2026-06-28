@@ -7,8 +7,8 @@
     "max_h": 5.0,
     "min_b": 495.0,
     "max_b": 495.0,
-    "min_c": [0.0, 4.0],
-    "max_c": [0.0, 4.0],
+    "min_c": 0.0,
+    "max_c": 6.0,
     "min_mu": 2.0,
     "max_mu": 4.0,
     "discount_factor": 1.0

@@ -13,7 +13,7 @@ namespace DynaPlex::Models {
             int64_t max_lr;
             double min_h, max_h;
             double min_b, max_b;
-            std::vector<double> min_c, max_c;
+            double min_c, max_c;
             double min_mu, max_mu;
             double discount_factor;
             int64_t MaxOrderSize;

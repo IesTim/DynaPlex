@@ -38,8 +38,10 @@ namespace DynaPlex::Models {
                 throw DynaPlex::Error("dual_sourcing_backlog: l_min must be >= 1.");
             if (l_max <= l_min)
                 throw DynaPlex::Error("dual_sourcing_backlog: l_max must be > l_min.");
-            if ((int64_t)min_c.size() != K || (int64_t)max_c.size() != K)
-                throw DynaPlex::Error("dual_sourcing_backlog: min_c and max_c must have length K.");
+            if (min_c < 0)
+                throw DynaPlex::Error("dual_sourcing_backlog: min_c must be >= 0.");
+            if (max_c <= min_c)
+                throw DynaPlex::Error("dual_sourcing_backlog: max_c must be > min_c.");
             if (min_mu <= 0.0)
                 throw DynaPlex::Error("dual_sourcing_backlog: min_mu must be > 0.");
 
@@ -106,30 +108,6 @@ namespace DynaPlex::Models {
             features.Add(0.0);
         }
 
-        MDP::State MDP::GetInitialState(DynaPlex::RNG& rng) const {
-            State state{};
-            state.cat = StateCategory::AwaitAction();
-            state.total_inv = 0;
-            state.K = K;
-            state.MaxOrderSize = MaxOrderSize;
-            state.current_source = -1;
-            state.pending_orders.resize(K, 0);
-            state.l = valid_lead_time_tuples[0];
-            state.c = min_c;
-            state.mu = min_mu;
-            state.sigma = min_mu;
-            state.h = min_h;
-            state.b = min_b;
-            state.demand_min = 0;
-            state.demand_cdf = {1, 0};
-            auto queue = Queue<int64_t>{};
-            queue.reserve(max_lr);
-            for (int64_t i = 0; i < max_lr; i++)
-                queue.push_back(0);
-            state.state_vector = queue;
-            return state;
-        }
-
         MDP::State MDP::GetState(const DynaPlex::VarGroup& vars) const {
             State state{};
             vars.Get("cat", state.cat);
@@ -168,6 +146,54 @@ namespace DynaPlex::Models {
             vars.Add("pending_orders", pending_orders);
             vars.Add("MaxOrderSize", MaxOrderSize);
             return vars;
+        }
+
+        MDP::State MDP::GetInitialState(DynaPlex::RNG& rng) const {
+            State state{};
+
+            int64_t tuple_idx = static_cast<int64_t>(std::floor(rng.genUniform() * valid_lead_time_tuples.size()));
+            state.l = valid_lead_time_tuples[tuple_idx];
+
+            state.h = min_h + rng.genUniform() * (max_h - min_h);
+            state.b = min_b + rng.genUniform() * (max_b - min_b);
+
+            state.c.resize(K);
+            for (int64_t k = 0; k < K; k++)
+                state.c[k] = min_c + rng.genUniform() * (max_c - min_c);
+            std::sort(state.c.begin(), state.c.end(), std::greater<double>());
+            
+            state.mu = min_mu + rng.genUniform() * (max_mu - min_mu);
+            double min_sigma = std::sqrt(DiscreteDist::LeastVarianceRequiredForAERFit(state.mu));
+            double max_sigma = state.mu * 2.0;
+            state.sigma = min_sigma + rng.genUniform() * (max_sigma - min_sigma);
+            
+            DiscreteDist demand_dist = DiscreteDist::GetAdanEenigeResingDist(state.mu, state.sigma);
+            state.demand_min = demand_dist.Min();
+            state.demand_cdf.clear();
+            double cumulative = 0.0;
+            for (const auto& [value, prob] : demand_dist) {
+                cumulative += prob;
+                state.demand_cdf.push_back(cumulative);
+            }
+
+            state.K = K;
+            state.MaxOrderSize = MaxOrderSize;
+
+            auto queue = Queue<int64_t>{};
+            queue.reserve(max_lr);
+            for (int64_t i = 0; i < max_lr; i++) {
+                queue.push_back(0);
+            }
+            state.state_vector = queue;
+            state.total_inv = 0;
+
+            state.current_source = -1;
+            state.pending_orders.resize(K, 0);
+
+            state.cat = StateCategory::AwaitAction();
+
+            return state;
+
         }
     }
 }
