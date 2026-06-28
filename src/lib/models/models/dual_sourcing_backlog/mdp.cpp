@@ -181,7 +181,20 @@ namespace DynaPlex::Models {
         }
 
         void MDP::GetFeatures(const State& state, DynaPlex::Features& features) const {
-            features.Add(0.0);
+            features.Add(state.state_vector);
+
+            features.Add(state.mu);
+            features.Add(state.sigma);
+
+            features.Add(state.h);
+            features.Add(state.b);
+
+            for (int64_t k = 0; k < K; k++) {
+                features.Add(state.c[k]);
+                features.Add(static_cast<double>(state.l[k]));
+            }
+
+            features.Add(static_cast<double>(state.current_source));
         }
 
         MDP::State MDP::GetState(const DynaPlex::VarGroup& vars) const {
