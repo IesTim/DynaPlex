@@ -163,9 +163,21 @@ namespace DynaPlex::Models {
         }
 
         double MDP::ModifyStateWithEvent(State& state, const Event& event) const {
+            int64_t inventory = state.state_vector.pop_front();
+
+            inventory -= event;
+            state.total_inv -= event;
+
+            double cost = state.h * static_cast<double>(std::max(static_cast<int64_t>(0), inventory)) + state.b * static_cast<double>(std::max(static_cast<int64_t>(0), -inventory));
+
+            state.state_vector.push_back(0);
+            state.state_vector.front() = inventory;
+
+            state.total_inv = state.state_vector.sum();
+
             state.current_source = 0;
             state.cat = StateCategory::AwaitAction();
-            return 0.0;
+            return cost;
         }
 
         void MDP::GetFeatures(const State& state, DynaPlex::Features& features) const {
