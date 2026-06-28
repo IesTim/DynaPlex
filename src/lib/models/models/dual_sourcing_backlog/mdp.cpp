@@ -91,7 +91,10 @@ namespace DynaPlex::Models {
         }
 
         MDP::Event MDP::GetEvent(const State& state, DynaPlex::RNG& rng) const {
-            return 0;
+            double u = rng.genUniform();
+            auto it = std::lower_bound(state.demand_cdf.begin(), state.demand_cdf.end(), u);
+        
+            return state.demand_min + static_cast<int64_t>(std::distance(state.demand_cdf.begin(), it));
         }
 
         double MDP::ModifyStateWithAction(State& state, int64_t action) const {
