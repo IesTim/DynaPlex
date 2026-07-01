@@ -3,7 +3,7 @@
 
 using namespace DynaPlex;
 
-int main() {
+int main(int argc, char* argv[]) {
     // load mdp config
     auto& dp = DynaPlexProvider::Get();
     auto& system = dp.System();
@@ -13,6 +13,10 @@ int main() {
     system << "MDP loaded: dual_sourcing_backlog" << std::endl;
 
     // load dcl config
+    std::string dcl_config_name = "dcl_config_test.json";
+    if (argc > 1)
+        dcl_config_name = argv[1];
+         
     VarGroup dcl_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "dcl_config_0.json"));
 
     int64_t num_gens;
