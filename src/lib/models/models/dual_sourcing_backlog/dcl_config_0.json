@@ -1,0 +1,16 @@
+{
+    "N": 100000,
+    "num_gens": 3,
+    "SimulateOnlyPromisingActions": true,
+    "Num_Promising_Actions": 4,
+    "retrain_lastgen_only": false,
+    "nn_architecture": {
+        "type": "mlp",
+        "hidden_layers": [64, 64]
+    },
+    "nn_training": {
+        "early_stopping_patience": 5,
+        "mini_batch_size": 256,
+        "max_training_epochs": 25
+    }
+}
