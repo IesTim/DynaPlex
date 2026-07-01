@@ -3,6 +3,7 @@
 #include "dynaplex/parallel_execute.h"
 #include "dynaplex/policycomparison.h"
 #include <cmath>
+#include <algorithm>
 namespace DynaPlex::DCL {
 
 

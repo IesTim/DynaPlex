@@ -2,6 +2,7 @@
 #include "dynaplex/trajectory.h"
 #include "dynaplex/parallel_execute.h"
 #include "dynaplex/policycomparison.h"
+#include <algorithm>
 namespace DynaPlex::Utilities {
 
 	void PolicyComparer::ComputeReturns(std::span<std::vector<double>>& ReturnPerTrajectory,const DynaPlex::Policy& policy, int64_t offset) const
