@@ -9,7 +9,7 @@ add_executable(${targetname})
 
 set_property(TARGET ${targetname} PROPERTY EXCLUDE_FROM_ALL TRUE)
 
-target_source(${targetname} PRIVATE ${headers} ${sources})
+target_sources(${targetname} PRIVATE ${headers} ${sources})
 target_include_directories(${targetname} PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
 target_link_libraries(${targetname} PRIVATE DynaPlex::DynaPlex)
