@@ -1,5 +1,6 @@
 #include "mdp.h"
 #include "dynaplex/erasure/mdpregistrar.h"
+#include "policies.h"
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -15,7 +16,9 @@ namespace DynaPlex::Models {
         }
 
         void MDP::RegisterPolicies(DynaPlex::Erasure::PolicyRegistry<MDP>& registry) const {
-
+            registry.Register<CDIPolicy>("cdi", "Constant Dual Index policy with parameters S_r and S_e.");
+            registry.Register<DIPolicy>("di", "Dual Index policy with single parameter S.");
+            registry.Register<CDIPolicy>("si", "Single Index policy - orders only from regular source.");
         }
 
         MDP::MDP(const DynaPlex::VarGroup& config) {
