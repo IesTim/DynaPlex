@@ -50,5 +50,20 @@ namespace DynaPlex::Models {
 
             return q_r * (mdp->MaxOrderSize + 1) + q_e;
         }
+
+        TBSPolicy::TBSPolicy(std::shared_ptr<const MDP> mdp, const VarGroup& config) : mdp{ mdp } {
+            config.GetOrDefault("S_e", S_e, mdp->MaxOrderSize / 2);
+            config.GetOrDefault("c", c, mdp->MaxOrderSize / 4);
+        }
+
+        int64_t TBSPolicy::GetAction(const MDP::State& state) const {
+            int64_t IP = state.total_inv;
+
+            int64_t q_r = std::min(c, mdp->MaxOrderSize);
+            int64_t q_e = std::max(int64_t(0), S_e - IP);
+            q_e = std::min(q_e, mdp->MaxOrderSize);
+
+            return q_r * (mdp->MaxOrderSize + 1) + q_e;
+        }
     }
 }

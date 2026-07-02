@@ -18,7 +18,8 @@ namespace DynaPlex::Models {
         void MDP::RegisterPolicies(DynaPlex::Erasure::PolicyRegistry<MDP>& registry) const {
             registry.Register<CDIPolicy>("cdi", "Constant Dual Index policy with parameters S_r and S_e.");
             registry.Register<DIPolicy>("di", "Dual Index policy with single parameter S.");
-            registry.Register<CDIPolicy>("si", "Single Index policy - orders only from regular source.");
+            registry.Register<CDIPolicy>("si", "Single Index policy with orders only from regular source.");
+            registry.Register<TBSPolicy>("tbs", "Tailored Base-Surge policy with parameters S_e and c.");
         }
 
         MDP::MDP(const DynaPlex::VarGroup& config) {
