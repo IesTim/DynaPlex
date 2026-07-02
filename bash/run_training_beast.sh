@@ -3,9 +3,9 @@ set -e
 
 REPO_DIR="/home/ies/Repositories/DynaPlex"
 IO_DIR="/home/ies/DynaPlex_IO/IO_DynaPlex"
-EXECUTABLE=".out/LinRel/bin/dual_sourcing_gca"
+EXECUTABLE="./out/LinRel/bin/dual_sourcing_gca"
 DCL_CONFIG="${1:-dcl_config_0.json}"
-MDP_CONFIG="${1:-mdp_config_0.json}"
+MDP_CONFIG="${2:-mdp_config_0.json}"
 NTFY_TOPIC="ies_beast_621349"
 
 notify() {
@@ -34,7 +34,6 @@ EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
     echo "Training complete"
-    git add /home/ies/DynaPlex_IO/IO_DynaPlex/dual_sourcing_backlog / 2>/dev/null || true
     notify "Beast: Training complete!"
 else 
     notify "Beast: Training failed :("
