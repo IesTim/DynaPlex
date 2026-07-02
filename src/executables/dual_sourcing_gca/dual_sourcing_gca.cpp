@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
     if (argc > 1)
         dcl_config_name = argv[1];
          
-    VarGroup dcl_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "dcl_config_0.json"));
+    VarGroup dcl_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", dcl_config_name));
 
     int64_t num_gens;
     dcl_config.Get("num_gens", num_gens);
