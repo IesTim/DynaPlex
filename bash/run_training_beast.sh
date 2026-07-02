@@ -15,7 +15,9 @@ notify() {
 cd "$REPO_DIR"
 echo "Working directory: $REPO_DIR"
 echo "Pull code"
-git pull
+git fetch origin
+git reset --hard origin/feature/dual-sourcing-mdp
+chmod +x bash/run_training_beast.sh
 echo "Pull complete"
 echo "Copying config files to IO directory"
 cp src/lib/models/models/dual_sourcing_backlog/*.json "$IO_DIR/mdp_config_examples/dual_sourcing_backlog/"
