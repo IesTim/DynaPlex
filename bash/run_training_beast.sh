@@ -2,7 +2,7 @@
 set -e
 
 REPO_DIR="/home/ies/Repositories/DynaPlex"
-IO_DIR="/home/ies/DynaPlex_IO/IO_Dynaplex"
+IO_DIR="/home/ies/DynaPlex_IO/IO_DynaPlex"
 EXECUTABLE=".out/LinRel/bin/dual_sourcing_gca"
 DCL_CONFIG="${1:-dcl_config_0.json}"
 MDP_CONFIG="${1:-mdp_config_0.json}"
