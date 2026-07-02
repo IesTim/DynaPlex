@@ -23,6 +23,7 @@ bld/
 .idea
 **/__pycache__/
 .vs/
+.vscode/
 
 
 /CMakeUserPresets.json
