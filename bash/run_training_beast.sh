@@ -21,7 +21,7 @@ git fetch origin
 git reset --hard origin/feature/dual-sourcing-mdp
 chmod +x bash/run_training_beast.sh
 
-notify "[$START_DATETIME] %RUN_ID | Pull complete, building..."
+notify "[$START_DATETIME] $RUN_ID | Pull complete, building..."
 
 echo "Pull complete"
 echo "Copying config files to IO directory"
