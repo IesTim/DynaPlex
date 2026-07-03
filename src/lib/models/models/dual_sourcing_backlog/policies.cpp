@@ -11,12 +11,13 @@ namespace DynaPlex::Models {
         }
 
         int64_t CDIPolicy::GetAction(const MDP::State& state) const {
-            int64_t IP = state.total_inv;
+            int64_t IP_e = state.state_vector.front();
+            int64_t IP_r = state.total_inv;
 
-            int64_t q_e = std::max(int64_t(0), S_e - IP);
+            int64_t q_e = std::max(int64_t(0), S_e - IP_e);
             q_e = std::min(q_e, mdp->MaxOrderSize);
 
-            int64_t q_r = std::max(int64_t(0), S_r - (IP + q_e));
+            int64_t q_r = std::max(int64_t(0), S_r - (IP_r + q_e));
             q_r = std::min(q_r, mdp->MaxOrderSize);
 
             return q_r * (mdp->MaxOrderSize + 1) + q_e;

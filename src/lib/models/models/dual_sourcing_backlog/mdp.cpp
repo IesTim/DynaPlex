@@ -178,7 +178,7 @@ namespace DynaPlex::Models {
             double cost = state.h * static_cast<double>(std::max(static_cast<int64_t>(0), inventory)) + state.b * static_cast<double>(std::max(static_cast<int64_t>(0), -inventory));
 
             state.state_vector.push_back(0);
-            state.state_vector.front() = inventory;
+            state.state_vector.front() += inventory;
 
             state.total_inv = state.state_vector.sum();
 
