@@ -102,113 +102,129 @@ void RunEval(const std::string& eval_config_name) {
         instance_result.Add("name", name);
 
         // cdi
-        VarGroup cdi_params;
-        tuned_inst.Get("CDI", cdi_params);
-        int64_t S_r, S_e;
-        cdi_params.Get("S_r", S_r);
-        cdi_params.Get("S_e", S_e);
+        {
+            VarGroup policy_config;
+            VarGroup cdi_params;
+            tuned_inst.Get("CDI", cdi_params);
+            int64_t S_r, S_e;
+            cdi_params.Get("S_r", S_r);
+            cdi_params.Get("S_e", S_e);
 
-        VarGroup policy_config;
-        policy_config.Add("id", std::string("cdi"));
-        policy_config.Add("S_r", S_r);
-        policy_config.Add("S_e", S_e);
-        auto policy = mdp->GetPolicy(policy_config);
-        double cost = EvaluatePolicy(mdp, policy, sim_config);
+            policy_config.Add("id", std::string("cdi"));
+            policy_config.Add("S_r", S_r);
+            policy_config.Add("S_e", S_e);
+            auto policy = mdp->GetPolicy(policy_config);
+            double cost = EvaluatePolicy(mdp, policy, sim_config);
 
-        VarGroup res;
-        res.Add("cost", cost);
-        res.Add("S_r", S_r);
-        res.Add("S_e", S_e);
-        instance_result.Add("CDI", res);
-        system << "  CDI cost: " << cost << std::endl;
+            VarGroup res;
+            res.Add("cost", cost);
+            res.Add("S_r", S_r);
+            res.Add("S_e", S_e);
+            instance_result.Add("CDI", res);
+            system << "  CDI cost: " << cost << std::endl; 
+        }
         
 
         // di
-        VarGroup di_params;
-        tuned_inst.Get("DI", di_params);
-        int64_t S;
-        di_params.Get("S", S);
+        { 
+            VarGroup policy_config;
+            VarGroup di_params;
+            tuned_inst.Get("DI", di_params);
+            int64_t S;
+            di_params.Get("S", S);
 
-        VarGroup policy_config;
-        policy_config.Add("id", std::string("di"));
-        policy_config.Add("S", S);
-        auto policy = mdp->GetPolicy(policy_config);
-        double cost = EvaluatePolicy(mdp, policy, sim_config);
+            policy_config.Add("id", std::string("di"));
+            policy_config.Add("S", S);
+            auto policy = mdp->GetPolicy(policy_config);
+            double cost = EvaluatePolicy(mdp, policy, sim_config);
 
-        VarGroup res;
-        res.Add("cost", cost);
-        res.Add("S", S);
-        instance_result.Add("DI", res);
-        system << "  DI cost: " << cost << std::endl;
+            VarGroup res;
+            res.Add("cost", cost);
+            res.Add("S", S);
+            instance_result.Add("DI", res);
+            system << "  DI cost: " << cost << std::endl;
+        }
+        
 
         // si
-        VarGroup si_params;
-        tuned_inst.Get("SI", si_params);
-        int64_t S;
-        si_params.Get("S", S);
+        {
+            VarGroup policy_config;
+            VarGroup si_params;
+            tuned_inst.Get("SI", si_params);
+            int64_t S;
+            si_params.Get("S", S);
 
-        VarGroup policy_config;
-        policy_config.Add("id", std::string("si"));
-        policy_config.Add("S", S);
-        auto policy = mdp->GetPolicy(policy_config);
-        double cost = EvaluatePolicy(mdp, policy, sim_config);
+            policy_config.Add("id", std::string("si"));
+            policy_config.Add("S", S);
+            auto policy = mdp->GetPolicy(policy_config);
+            double cost = EvaluatePolicy(mdp, policy, sim_config);
 
-        VarGroup res;
-        res.Add("cost", cost);
-        res.Add("S", S);
-        instance_result.Add("SI", res);
-        system << "  SI cost: " << cost << std::endl;
+            VarGroup res;
+            res.Add("cost", cost);
+            res.Add("S", S);
+            instance_result.Add("SI", res);
+            system << "  SI cost: " << cost << std::endl;
+        }
+        
 
 
         // tbs
-        VarGroup tbs_params;
-        tuned_inst.Get("TBS", tbs_params);
-        int64_t S_e, c;
-        tbs_params.Get("S_e", S_e);
-        tbs_params.Get("c", c);
+        {
+            VarGroup policy_config;
+            VarGroup tbs_params;
+            tuned_inst.Get("TBS", tbs_params);
+            int64_t S_e, c;
+            tbs_params.Get("S_e", S_e);
+            tbs_params.Get("c", c);
 
-        VarGroup policy_config;
-        policy_config.Add("id", std::string("tbs"));
-        policy_config.Add("S_e", S_e);
-        policy_config.Add("c", c);
-        auto policy = mdp->GetPolicy(policy_config);
-        double cost = EvaluatePolicy(mdp, policy, sim_config);
+            policy_config.Add("id", std::string("tbs"));
+            policy_config.Add("S_e", S_e);
+            policy_config.Add("c", c);
+            auto policy = mdp->GetPolicy(policy_config);
+            double cost = EvaluatePolicy(mdp, policy, sim_config);
 
-        VarGroup res;
-        res.Add("cost", cost);
-        res.Add("S_e", S_e);
-        res.Add("c", c);
-        instance_result.Add("TBS", res);
-        system << "  TBS cost: " << cost << std::endl;
+            VarGroup res;
+            res.Add("cost", cost);
+            res.Add("S_e", S_e);
+            res.Add("c", c);
+            instance_result.Add("TBS", res);
+            system << "  TBS cost: " << cost << std::endl;
+        }
+        
 
 
         // GCA-DS flat
-        VarGroup mdp_flat = BuildInstanceConfig(instance);
-        mdp_flat.Set("action_representation", std::string("flat_joint"));
-        DynaPlex::MDP mdp_f = dp.GetMDP(mdp_flat);
-        auto full_path = system.filepath("dual_sourcing_backlog", path_flat);
-        auto policy = dp.LoadPolicy(mdp_f, full_path);
-        double cost = EvaluatePolicy(mdp_f, policy, sim_config);
+        {
+            VarGroup mdp_flat = BuildInstanceConfig(instance);
+            mdp_flat.Set("action_representation", std::string("flat_joint"));
+            DynaPlex::MDP mdp_f = dp.GetMDP(mdp_flat);
+            auto full_path = system.filepath("dual_sourcing_backlog", path_flat);
+            auto policy = dp.LoadPolicy(mdp_f, full_path);
+            double cost = EvaluatePolicy(mdp_f, policy, sim_config);
 
-        VarGroup res;
-        res.Add("cost", cost);
-        instance_result.Add("GCA_flat_joint", res);
-        system << "  GCA flat_joint cost: " << cost << std::endl;
+            VarGroup res;
+            res.Add("cost", cost);
+            instance_result.Add("GCA_flat_joint", res);
+            system << "  GCA flat_joint cost: " << cost << std::endl;
+        }
+        
 
 
         //  GCA-DS sequential
-        VarGroup mdp_seq = BuildInstanceConfig(instance);
-        mdp_seq.Set("action_representation", std::string("sequential"));
-        DynaPlex::MDP mdp_s = dp.GetMDP(mdp_seq);
-        auto full_path = system.filepath("dual_sourcing_backlog", path_sequential);
-        auto policy = dp.LoadPolicy(mdp_s, full_path);
-        double cost = EvaluatePolicy(mdp_s, policy, sim_config);
+        {
+            VarGroup mdp_seq = BuildInstanceConfig(instance);
+            mdp_seq.Set("action_representation", std::string("sequential"));
+            DynaPlex::MDP mdp_s = dp.GetMDP(mdp_seq);
+            auto full_path = system.filepath("dual_sourcing_backlog", path_sequential);
+            auto policy = dp.LoadPolicy(mdp_s, full_path);
+            double cost = EvaluatePolicy(mdp_s, policy, sim_config);
 
-        VarGroup res;
-        res.Add("cost", cost);
-        instance_result.Add("GCA_sequential", res);
-        system << "  GCA sequential cost: " << cost << std::endl;
-
+            VarGroup res;
+            res.Add("cost", cost);
+            instance_result.Add("GCA_sequential", res);
+            system << "  GCA sequential cost: " << cost << std::endl;
+        }
+        
         // Compute gaps vs CDI
         add_gap("DI", instance_result);
         add_gap("SI", instance_result);
