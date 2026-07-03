@@ -63,23 +63,43 @@ int64_t LineSearch(DynaPlex::MDP& mdp, const VarGroup& tuning_config, const std:
     int64_t best_val = start_val;
 
     // Search upward
+    int64_t no_improve_count = 0;
     for (int64_t val = start_val + 1; val <= max_val; val++)
     {
         policy_config.Set(param_name, val);
         policy = mdp->GetPolicy(policy_config);
         double cost = EvaluatePolicy(mdp, policy, tuning_config);
-        if (cost < best_cost) { best_cost = cost; best_val = val; }
-        else break;
+        if (cost < best_cost)
+        {
+            best_cost = cost;
+            best_val = val;
+            no_improve_count = 0;
+        }
+        else
+        {
+            no_improve_count++;
+            if (no_improve_count >= 3) break;
+        }
     }
 
     // Search downward from start
+    int64_t no_improve_count = 0;
     for (int64_t val = start_val - 1; val >= 0; val--)
     {
         policy_config.Set(param_name, val);
         policy = mdp->GetPolicy(policy_config);
         double cost = EvaluatePolicy(mdp, policy, tuning_config);
-        if (cost < best_cost) { best_cost = cost; best_val = val; }
-        else break;
+        if (cost < best_cost)
+        {
+            best_cost = cost;
+            best_val = val;
+            no_improve_count = 0;
+        }
+        else
+        {
+            no_improve_count++;
+            if (no_improve_count >= 3) break;
+        }
     }
 
     return best_val;

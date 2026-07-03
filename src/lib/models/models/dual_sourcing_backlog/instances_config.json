@@ -34,6 +34,6 @@
     "tuning": {
         "warmup_periods": 100,
         "periods_per_trajectory": 2000,
-        "number_of_trajectories": 200
+        "number_of_trajectories": 500
     }
 }
