@@ -98,6 +98,7 @@ void RunEval(const std::string &eval_config_name)
         instance_result.Add("name", name);
 
         // cdi
+        try
         {
             VarGroup policy_config;
             VarGroup cdi_params;
@@ -119,8 +120,13 @@ void RunEval(const std::string &eval_config_name)
             instance_result.Add("CDI", res);
             system << "  CDI cost: " << cost << std::endl;
         }
+        catch (const DynaPlex::Error& e)
+        {
+            system << " cdi: skipped (" << e.what() << ")" << std::endl;
+        }
 
         // di
+        try
         {
             VarGroup policy_config;
             VarGroup di_params;
@@ -139,8 +145,13 @@ void RunEval(const std::string &eval_config_name)
             instance_result.Add("DI", res);
             system << "  DI cost: " << cost << std::endl;
         }
+        catch (const DynaPlex::Error& e)
+        {
+            system << " di: skipped (" << e.what() << ")" << std::endl;
+        }
 
         // si
+        try
         {
             VarGroup policy_config;
             VarGroup si_params;
@@ -159,8 +170,13 @@ void RunEval(const std::string &eval_config_name)
             instance_result.Add("SI", res);
             system << "  SI cost: " << cost << std::endl;
         }
+        catch (const DynaPlex::Error& e)
+        {
+            system << " si: skipped (" << e.what() << ")" << std::endl;
+        }
 
         // tbs
+        try
         {
             VarGroup policy_config;
             VarGroup tbs_params;
@@ -182,8 +198,13 @@ void RunEval(const std::string &eval_config_name)
             instance_result.Add("TBS", res);
             system << "  TBS cost: " << cost << std::endl;
         }
+        catch (const DynaPlex::Error& e)
+        {
+            system << " tbs: skipped (" << e.what() << ")" << std::endl;
+        }
 
         // GCA-DS flat
+        try
         {
             VarGroup mdp_flat = BuildInstanceConfig(instance, train_l_max);
             mdp_flat.Set("action_representation", std::string("flat_joint"));
@@ -197,8 +218,13 @@ void RunEval(const std::string &eval_config_name)
             instance_result.Add("GCA_flat_joint", res);
             system << "  GCA flat_joint cost: " << cost << std::endl;
         }
+        catch (const DynaPlex::Error& e)
+        {
+            system << " GCA flat: skipped (" << e.what() << ")" << std::endl;
+        }
 
         //  GCA-DS sequential
+        try
         {
             VarGroup mdp_seq = BuildInstanceConfig(instance, train_l_max);
             mdp_seq.Set("action_representation", std::string("sequential"));
@@ -211,6 +237,10 @@ void RunEval(const std::string &eval_config_name)
             res.Add("cost", cost);
             instance_result.Add("GCA_sequential", res);
             system << "  GCA sequential cost: " << cost << std::endl;
+        }
+        catch (const DynaPlex::Error& e)
+        {
+            system << " GCA sequential: skipped (" << e.what() << ")" << std::endl;
         }
 
         double cdi_cost;
