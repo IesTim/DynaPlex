@@ -18,9 +18,7 @@ notify() {
 cd "$REPO_DIR"
 echo "Working directory: $REPO_DIR"
 echo "Pull code"
-git fetch origin
-git reset --hard origin/feature/dual-sourcing-mdp
-chmod +x bash/run_training_beast.sh
+git pull
 
 notify "[$START_DATETIME] $RUN_ID | Pull complete, building..."
 
@@ -46,5 +44,12 @@ if [ $EXIT_CODE -eq 0 ]; then
 else 
     notify "[$START_DATETIME] $RUN_ID | Training FAILED! Exit code: $EXIT_CODE"
 fi 
+
+echo "Start pushing..."
+git add -A
+git commit -m "Beast Run: $START_DATETIME $RUN_ID"
+git push 
+
+notify "[$START_DATETIME] $RUN_ID | Push complete.."
 
 echo "Done. Exit code: $EXIT_CODE" 
