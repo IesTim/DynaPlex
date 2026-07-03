@@ -114,7 +114,7 @@ VarGroup TuneCDI(DynaPlex::MDP& mdp, const VarGroup& tuning_config, double mu, d
     double fractile = b / (b + h);
 
     int64_t S_r = NewsvendorFractile(mu, sigma, fractile, l_r);
-    int64_t S_e = NewsvendorFractile(mu, sigma, fractile, l_e);
+    int64_t S_e = std::max(int64_t(1), NewsvendorFractile(mu, sigma, fractile, l_e) / (l_r - l_e + 1));
 
     VarGroup policy_config;
     policy_config.Add("id", std::string("cdi"));
@@ -303,7 +303,7 @@ int main(int argc, char* argv[])
     output.Add("tuned_policies", results);
 
     auto output_path = system.filepath("dual_sourcing_backlog", "tuned_heuristic_params.json");
-    output.SaveToFile(output_path); // IntelliSense kan hem niet vinden, maar compileert wel
+    output.SaveToFile(output_path);
 
     system << "Tuning complete. Results saved to: " << output_path << std::endl;
 
