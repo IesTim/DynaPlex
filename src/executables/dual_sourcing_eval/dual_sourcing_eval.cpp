@@ -261,11 +261,11 @@ void RunEval(const std::string &eval_config_name)
         };
 
         // Compute gaps vs CDI
-        add_gap("DI", instance_result);
-        add_gap("SI", instance_result);
-        add_gap("TBS", instance_result);
-        add_gap("GCA_flat_joint", instance_result);
-        add_gap("GCA_sequential", instance_result);
+        if (instance_result.HasKey("DI")) add_gap("DI", instance_result);
+        if (instance_result.HasKey("SI")) add_gap("SI", instance_result);
+        if (instance_result.HasKey("TBS")) add_gap("TBS", instance_result);
+        if (instance_result.HasKey("GCA_flat_joint")) add_gap("GCA_flat_joint", instance_result);
+        if (instance_result.HasKey("GCA_sequential")) add_gap("GCA_sequential", instance_result);
 
         results.push_back(instance_result);
         system << "  Done." << std::endl;
