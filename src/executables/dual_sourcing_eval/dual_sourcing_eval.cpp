@@ -185,7 +185,7 @@ void RunEval(const std::string &eval_config_name)
 
         // GCA-DS flat
         {
-            VarGroup mdp_flat = BuildInstanceConfig(instance);
+            VarGroup mdp_flat = BuildInstanceConfig(instance, train_l_max);
             mdp_flat.Set("action_representation", std::string("flat_joint"));
             DynaPlex::MDP mdp_f = dp.GetMDP(mdp_flat);
             auto full_path = system.filepath("dual_sourcing_backlog", path_flat);
@@ -200,7 +200,7 @@ void RunEval(const std::string &eval_config_name)
 
         //  GCA-DS sequential
         {
-            VarGroup mdp_seq = BuildInstanceConfig(instance);
+            VarGroup mdp_seq = BuildInstanceConfig(instance, train_l_max);
             mdp_seq.Set("action_representation", std::string("sequential"));
             DynaPlex::MDP mdp_s = dp.GetMDP(mdp_seq);
             auto full_path = system.filepath("dual_sourcing_backlog", path_sequential);
