@@ -6,7 +6,8 @@
 
 using namespace DynaPlex;
 
-VarGroup BuildInstanceConfig(const VarGroup& instance) { 
+VarGroup BuildInstanceConfig(const VarGroup &instance)
+{
     VarGroup config;
     config.Add("id", "dual_sourcing_backlog");
     config.Add("K", int64_t(2));
@@ -24,19 +25,24 @@ VarGroup BuildInstanceConfig(const VarGroup& instance) {
     instance.Get("b", b);
     instance.Get("c_r", c_r);
     instance.Get("c_e", c_e);
-    
-    config.Add("min_h", h); config.Add("max_h", h);
-    config.Add("min_b", b); config.Add("max_b", b);
-    config.Add("min_c", c_r); config.Add("max_c", c_e);
-    config.Add("min_mu", mu); config.Add("max_mu", mu);
+
+    config.Add("min_h", h);
+    config.Add("max_h", h);
+    config.Add("min_b", b);
+    config.Add("max_b", b);
+    config.Add("min_c", c_r);
+    config.Add("max_c", c_e);
+    config.Add("min_mu", mu);
+    config.Add("max_mu", mu);
     config.Add("action_representation", std::string("flat_joint"));
     config.Add("discount_factor", 1.0);
 
     return config;
 }
 
-double EvaluatePolicy(DynaPlex::MDP& mdp, DynaPlex::Policy& policy, const VarGroup& tuning_config) {
-    auto& dp = DynaPlexProvider::Get();
+double EvaluatePolicy(DynaPlex::MDP &mdp, DynaPlex::Policy &policy, const VarGroup &tuning_config)
+{
+    auto &dp = DynaPlexProvider::Get();
     auto comparer = dp.GetPolicyComparer(mdp, tuning_config);
     auto result = comparer.Assess(policy);
     double cost;
@@ -44,24 +50,10 @@ double EvaluatePolicy(DynaPlex::MDP& mdp, DynaPlex::Policy& policy, const VarGro
     return cost;
 }
 
-auto add_gap = [&](const std::string& key, VarGroup instance_result) {
-    double cdi_cost;
-    VarGroup cdi_res;
-    instance_result.Get("CDI", cdi_res);
-    cdi_res.Get("cost", cdi_cost);
-
-    VarGroup res;
-    instance_result.Get(key, res);
-    double cost;
-    res.Get("cost", cost);
-    double gap = (cost - cdi_cost) / cdi_cost * 100.0;
-    res.Add("gap_vs_CDI_pct", gap);
-    instance_result.Set(key, res);
-};
-
-void RunEval(const std::string& eval_config_name) {
-    auto& dp = DynaPlexProvider::Get();
-    auto& system = dp.System();
+void RunEval(const std::string &eval_config_name)
+{
+    auto &dp = DynaPlexProvider::Get();
+    auto &system = dp.System();
 
     VarGroup instances_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "instances_config.json"));
 
@@ -87,9 +79,10 @@ void RunEval(const std::string& eval_config_name) {
 
     std::vector<VarGroup> results;
 
-    for (size_t i = 0; i < instances.size(); i++) {
-        auto& instance = instances[i];
-        auto& tuned_inst = tuned_instances[i];
+    for (size_t i = 0; i < instances.size(); i++)
+    {
+        auto &instance = instances[i];
+        auto &tuned_inst = tuned_instances[i];
 
         std::string name;
         instance.Get("name", name);
@@ -121,12 +114,11 @@ void RunEval(const std::string& eval_config_name) {
             res.Add("S_r", S_r);
             res.Add("S_e", S_e);
             instance_result.Add("CDI", res);
-            system << "  CDI cost: " << cost << std::endl; 
+            system << "  CDI cost: " << cost << std::endl;
         }
-        
 
         // di
-        { 
+        {
             VarGroup policy_config;
             VarGroup di_params;
             tuned_inst.Get("DI", di_params);
@@ -144,7 +136,6 @@ void RunEval(const std::string& eval_config_name) {
             instance_result.Add("DI", res);
             system << "  DI cost: " << cost << std::endl;
         }
-        
 
         // si
         {
@@ -165,8 +156,6 @@ void RunEval(const std::string& eval_config_name) {
             instance_result.Add("SI", res);
             system << "  SI cost: " << cost << std::endl;
         }
-        
-
 
         // tbs
         {
@@ -190,8 +179,6 @@ void RunEval(const std::string& eval_config_name) {
             instance_result.Add("TBS", res);
             system << "  TBS cost: " << cost << std::endl;
         }
-        
-
 
         // GCA-DS flat
         {
@@ -207,8 +194,6 @@ void RunEval(const std::string& eval_config_name) {
             instance_result.Add("GCA_flat_joint", res);
             system << "  GCA flat_joint cost: " << cost << std::endl;
         }
-        
-
 
         //  GCA-DS sequential
         {
@@ -224,7 +209,24 @@ void RunEval(const std::string& eval_config_name) {
             instance_result.Add("GCA_sequential", res);
             system << "  GCA sequential cost: " << cost << std::endl;
         }
-        
+
+        double cdi_cost;
+        {
+            VarGroup cdi_res;
+            instance_result.Get("CDI", cdi_res);
+            cdi_res.Get("cost", cdi_cost);
+        }
+
+        auto add_gap = [&](const std::string &key, VarGroup& instance_result) {
+            VarGroup res;
+            instance_result.Get(key, res);
+            double cost;
+            res.Get("cost", cost);
+            double gap = (cost - cdi_cost) / cdi_cost * 100.0;
+            res.Add("gap_vs_CDI_pct", gap);
+            instance_result.Set(key, res);
+        };
+
         // Compute gaps vs CDI
         add_gap("DI", instance_result);
         add_gap("SI", instance_result);
@@ -244,11 +246,13 @@ void RunEval(const std::string& eval_config_name) {
     system << "Eval complete. Results saved." << std::endl;
 }
 
-int main(int argc, char* argv[]) {
-    auto& dp = DynaPlexProvider::Get();
-    auto& system = dp.System();
+int main(int argc, char *argv[])
+{
+    auto &dp = DynaPlexProvider::Get();
+    auto &system = dp.System();
 
-    if (argc < 3) {
+    if (argc < 3)
+    {
         system << "Usage: dual_sourcing_eval <mode> <config>" << std::endl;
         system << "Modes: eval | sweep | convergence | horizon" << std::endl;
         return 1;
