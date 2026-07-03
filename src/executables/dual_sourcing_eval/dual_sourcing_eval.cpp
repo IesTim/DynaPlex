@@ -6,7 +6,7 @@
 
 using namespace DynaPlex;
 
-VarGroup BuildInstanceConfig(const VarGroup &instance)
+VarGroup BuildInstanceConfig(const VarGroup& instance, int64_t train_l_max)
 {
     VarGroup config;
     config.Add("id", "dual_sourcing_backlog");
@@ -16,7 +16,7 @@ VarGroup BuildInstanceConfig(const VarGroup &instance)
     instance.Get("l_e", l_e);
     instance.Get("l_r", l_r);
     config.Add("l_min", l_e);
-    config.Add("l_max", l_r);
+    config.Add("l_max", train_l_max);
 
     double mu, sigma, h, b, c_r, c_e;
     instance.Get("mu", mu);
@@ -88,7 +88,10 @@ void RunEval(const std::string &eval_config_name)
         instance.Get("name", name);
         system << "Evaluating instance: " << name << std::endl;
 
-        VarGroup mdp_config = BuildInstanceConfig(instance);
+        int64_t train_l_max;
+        eval_config.Get("train_l_max", train_l_max);
+
+        VarGroup mdp_config = BuildInstanceConfig(instance, train_l_max);
         DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
 
         VarGroup instance_result;
