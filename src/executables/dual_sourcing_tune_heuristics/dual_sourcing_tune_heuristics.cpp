@@ -43,7 +43,9 @@ double EvaluatePolicy(DynaPlex::MDP& mdp, DynaPlex::Policy& policy, const VarGro
     auto result = comparer.Assess(policy);
     double cost;
     result.Get("mean", cost);
-    return cost;
+    int64_t periods;
+    tuning_config.Get("periods_per_trajectory", periods);
+    return cost / static_cast<double>(periods);
 }
 
 int64_t NewsvendorFractile(double mu, double sigma, double fractile, int64_t lead_time) {
