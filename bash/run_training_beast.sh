@@ -20,7 +20,7 @@ echo "Working directory: $REPO_DIR"
 echo "Pull code"
 git pull
 
-notify "[$START_DATETIME] $RUN_ID | Pull complete, building..."
+notify "START - Beast Run: [$START_DATETIME] $RUN_ID" 
 
 echo "Pull complete"
 echo "Copying config files to IO directory"
@@ -32,7 +32,6 @@ export CC=gcc
 cmake --preset LinRel
 cmake --build out/LinRel --target dual_sourcing_gca -j 128
 echo "Build complete"
-notify "[$START_DATETIME] $RUN_ID | Build complete, starting training..."
 
 echo "Starting training"
 $EXECUTABLE "$DCL_CONFIG" "$MDP_CONFIG"
@@ -50,6 +49,6 @@ git add -A
 git commit -m "Beast Run: $START_DATETIME $RUN_ID"
 git push 
 
-notify "[$START_DATETIME] $RUN_ID | Push complete.."
+notify "FINISH - Beast Run: [$START_DATETIME] $RUN_ID"
 
 echo "Done. Exit code: $EXIT_CODE" 
