@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e
 
+# settings
 REPO_DIR="/home/ies/Repositories/DynaPlex"
 IO_DIR="/home/ies/DynaPlex_IO/IO_DynaPlex"
 EXECUTABLE="./out/LinRel/bin/dual_sourcing_gca"
