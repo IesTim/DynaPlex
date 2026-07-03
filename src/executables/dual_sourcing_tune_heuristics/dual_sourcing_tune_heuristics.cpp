@@ -78,12 +78,12 @@ int64_t LineSearch(DynaPlex::MDP& mdp, const VarGroup& tuning_config, const std:
         else
         {
             no_improve_count++;
-            if (no_improve_count >= 3) break;
+            if (no_improve_count >= 30) break;
         }
     }
 
     // Search downward from start
-    int64_t no_improve_count = 0;
+    no_improve_count = 0;
     for (int64_t val = start_val - 1; val >= 0; val--)
     {
         policy_config.Set(param_name, val);
@@ -98,7 +98,7 @@ int64_t LineSearch(DynaPlex::MDP& mdp, const VarGroup& tuning_config, const std:
         else
         {
             no_improve_count++;
-            if (no_improve_count >= 3) break;
+            if (no_improve_count >= 30) break;
         }
     }
 
