@@ -39,16 +39,14 @@ EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
     echo "Training complete"
-    notify "[$START_DATETIME] $RUN_ID | Training COMPLETE!"
+    echo "Start pushing..."
+    git add -A
+    git commit -m "Beast Run: $START_DATETIME $RUN_ID"
+    git push 
+    notify "FINISH - Beast Run: [$START_DATETIME] $RUN_ID"
 else 
-    notify "[$START_DATETIME] $RUN_ID | Training FAILED! Exit code: $EXIT_CODE"
+    echo "Training failed"
+    notify "ERROR - Beast Run: [$START_DATETIME] $RUN_ID"
 fi 
-
-echo "Start pushing..."
-git add -A
-git commit -m "Beast Run: $START_DATETIME $RUN_ID"
-git push 
-
-notify "FINISH - Beast Run: [$START_DATETIME] $RUN_ID"
 
 echo "Done. Exit code: $EXIT_CODE" 
