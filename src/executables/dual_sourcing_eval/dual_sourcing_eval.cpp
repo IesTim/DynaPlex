@@ -3,6 +3,7 @@
 #include <cmath>
 #include "dynaplex/dynaplexprovider.h"
 #include "dynaplex/modelling/discretedist.h"
+#include "../../lib/models/models/dual_sourcing_backlog/tuning_utils.h"
 
 using namespace DynaPlex;
 
@@ -40,18 +41,6 @@ VarGroup BuildInstanceConfig(const VarGroup &instance, int64_t train_l_max, cons
     return config;
 }
 
-double EvaluatePolicy(DynaPlex::MDP &mdp, DynaPlex::Policy &policy, const VarGroup &sim_config)
-{
-    auto &dp = DynaPlexProvider::Get();
-    auto comparer = dp.GetPolicyComparer(mdp, sim_config);
-    auto result = comparer.Assess(policy);
-    double cost;
-    result.Get("mean", cost);
-    int64_t periods;
-    sim_config.Get("periods_per_trajectory", periods);
-    return cost / static_cast<double>(periods);
-}
-
 double ComputeGap(double policy_cost, double cdi_cost)
 {
     return (policy_cost - cdi_cost) / cdi_cost * 100.0;
@@ -65,7 +54,7 @@ bool EvaluateGCA(DynaPlex::MDP &mdp, const std::string &weights_path, const VarG
     {
         auto full_path = system.filepath("dual_sourcing_backlog", weights_path);
         auto policy = dp.LoadPolicy(mdp, full_path);
-        cost_out = EvaluatePolicy(mdp, policy, sim_config);
+        cost_out = EvaluatePolicyTuning(mdp, policy, sim_config);
         return true;
     }
     catch (const DynaPlex::Error &e)
@@ -140,7 +129,7 @@ void RunEval(const std::string &eval_config_name)
             policy_config.Add("S_r", S_r);
             policy_config.Add("S_e", S_e);
             auto policy = mdp->GetPolicy(policy_config);
-            cdi_cost = EvaluatePolicy(mdp, policy, sim_config);
+            cdi_cost = EvaluatePolicyTuning(mdp, policy, sim_config);
             VarGroup res;
             res.Add("cost", cdi_cost);
             res.Add("gap_vs_CDI_pct", 0.0);
@@ -159,7 +148,7 @@ void RunEval(const std::string &eval_config_name)
             policy_config.Add("id", std::string("di"));
             policy_config.Add("S", S);
             auto policy = mdp->GetPolicy(policy_config);
-            double cost = EvaluatePolicy(mdp, policy, sim_config);
+            double cost = EvaluatePolicyTuning(mdp, policy, sim_config);
             VarGroup res;
             res.Add("cost", cost);
             res.Add("gap_vs_CDI_pct", ComputeGap(cost, cdi_cost));
@@ -177,7 +166,7 @@ void RunEval(const std::string &eval_config_name)
             policy_config.Add("id", std::string("si"));
             policy_config.Add("S", S);
             auto policy = mdp->GetPolicy(policy_config);
-            double cost = EvaluatePolicy(mdp, policy, sim_config);
+            double cost = EvaluatePolicyTuning(mdp, policy, sim_config);
             VarGroup res;
             res.Add("cost", cost);
             res.Add("gap_vs_CDI_pct", ComputeGap(cost, cdi_cost));
@@ -197,7 +186,7 @@ void RunEval(const std::string &eval_config_name)
             policy_config.Add("S_e", S_e);
             policy_config.Add("c", c);
             auto policy = mdp->GetPolicy(policy_config);
-            double cost = EvaluatePolicy(mdp, policy, sim_config);
+            double cost = EvaluatePolicyTuning(mdp, policy, sim_config);
             VarGroup res;
             res.Add("cost", cost);
             res.Add("gap_vs_CDI_pct", ComputeGap(cost, cdi_cost));
@@ -252,11 +241,147 @@ void RunEval(const std::string &eval_config_name)
 }
 
 // Parameter evaluation
-void RunSweep(const std::string &eval_config_name)
+void RunParameterEvaluation(const std::string& eval_config_name)
 {
-    auto &dp = DynaPlexProvider::Get();
-    auto &system = dp.System();
-    system << "Sweep mode not yet implemented." << std::endl;
+    auto& dp = DynaPlexProvider::Get();
+    auto& system = dp.System();
+
+    // Load config
+    VarGroup parameter_evaluation_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", eval_config_name));
+
+    // Read parameter settings
+    std::string parameter;
+    double parameter_min, parameter_max, parameter_step;
+    double train_min, train_max;
+    parameter_evaluation_config.Get("parameter", parameter);
+    parameter_evaluation_config.Get("parameter_min", parameter_min);
+    parameter_evaluation_config.Get("parameter_max", parameter_max);
+    parameter_evaluation_config.Get("parameter_step", parameter_step);
+    parameter_evaluation_config.Get("train_min", train_min);
+    parameter_evaluation_config.Get("train_max", train_max);
+
+    VarGroup base_instance;
+    parameter_evaluation_config.Get("base_instance", base_instance);
+
+    int64_t train_l_max;
+    parameter_evaluation_config.Get("train_l_max", train_l_max);
+
+    VarGroup sim_config, tuning_config;
+    parameter_evaluation_config.Get("simulation", sim_config);
+    parameter_evaluation_config.Get("tuning", tuning_config);
+
+    std::string path_flat;
+    parameter_evaluation_config.Get("gca_flat_joint", path_flat);
+
+    system << "Starting parameter evaluation mode: " << parameter
+           << " from " << parameter_min << " to " << parameter_max
+           << " step " << parameter_step << std::endl;
+
+    std::vector<VarGroup> parameter_results;
+
+    // Generate parameter values
+    for (double val = parameter_min; val <= parameter_max + 1e-9; val += parameter_step)
+    {
+        system << "Evaluating " << parameter 
+               << " = " << val << std::endl;
+
+        // Build instance with swept parameter
+        VarGroup instance = base_instance;
+        instance.Set(parameter, val);
+
+        // Update sigma if mu changes (maintain coefficient of variation)
+        if (parameter == "mu")
+        {
+            double base_mu, base_sigma;
+            base_instance.Get("mu", base_mu);
+            base_instance.Get("sigma", base_sigma);
+            double cv = base_sigma / base_mu;
+            instance.Set("sigma", val * cv);
+        }
+
+        // Build MDP for this parameter point
+        VarGroup mdp_config = BuildInstanceConfig(
+            instance, train_l_max, "flat_joint");
+        DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
+
+        // Re-tune CDI for this instance
+        double mu, sigma, h, b, c_r, c_e;
+        int64_t l_e, l_r;
+        instance.Get("mu", mu);
+        instance.Get("sigma", sigma);
+        instance.Get("h", h);
+        instance.Get("b", b);
+        instance.Get("c_r", c_r);
+        instance.Get("c_e", c_e);
+        instance.Get("l_e", l_e);
+        instance.Get("l_r", l_r);
+
+        // Compute max_val for line search
+        auto dist = DiscreteDist::GetAdanEenigeResingDist(mu, sigma);
+        auto demand_over_lr = DiscreteDist::GetZeroDist();
+        for (int64_t i = 0; i <= l_r; i++)
+            demand_over_lr = demand_over_lr.Add(dist);
+        int64_t max_val = demand_over_lr.Fractile(b / (b + h));
+
+        // Tune CDI
+        VarGroup cdi_result = TuneCDI(mdp, tuning_config,
+            mu, sigma, b, h, l_r, l_e, max_val);
+
+        // Evaluate CDI
+        double cdi_cost = 0.0;
+        {
+            int64_t S_r, S_e;
+            cdi_result.Get("S_r", S_r);
+            cdi_result.Get("S_e", S_e);
+            VarGroup policy_config;
+            policy_config.Add("id", std::string("cdi"));
+            policy_config.Add("S_r", S_r);
+            policy_config.Add("S_e", S_e);
+            auto policy = mdp->GetPolicy(policy_config);
+            cdi_cost = EvaluatePolicyTuning(mdp, policy, sim_config);
+        }
+
+        // Evaluate GCA-DS
+        double gca_cost = 0.0;
+        bool gca_success = EvaluateGCA(
+            mdp, path_flat, sim_config, gca_cost);
+
+        // Record result
+        VarGroup point;
+        point.Add("value", val);
+        point.Add("in_distribution", 
+            val >= train_min && val <= train_max);
+        point.Add("CDI_cost", cdi_cost);
+        point.Add("CDI_S_r", int64_t(0));
+        point.Add("CDI_S_e", int64_t(0));
+        cdi_result.Get("S_r", point);
+        if (gca_success)
+        {
+            point.Add("GCA_flat_cost", gca_cost);
+            point.Add("gap_vs_CDI_pct", ComputeGap(gca_cost, cdi_cost));
+        }
+        parameter_results.push_back(point);
+
+        system << "  CDI: " << cdi_cost;
+        if (gca_success)
+            system << "  GCA: " << gca_cost 
+                   << "  gap: " << ComputeGap(gca_cost, cdi_cost) << "%";
+        system << std::endl;
+    }
+
+    // Save results
+    VarGroup output;
+    output.Add("experiment", std::string("robustness_parameters"));
+    output.Add("parameter", parameter);
+    output.Add("train_min", train_min);
+    output.Add("train_max", train_max);
+    output.Add("parameter_points", parameter_results);
+
+    auto out_path = system.filepath(
+        "dual_sourcing_backlog", 
+        "parameter_" + parameter + ".json");
+    output.SaveToFile(out_path, 4);
+    system << "Parameter evaluation complete. Results saved." << std::endl;
 }
 
 // Horizon evaluation
@@ -283,7 +408,7 @@ int main(int argc, char *argv[])
     if (argc < 3)
     {
         system << "Usage: dual_sourcing_eval <mode> <config>" << std::endl;
-        system << "Modes: eval | sweep | horizon | analyze" << std::endl;
+        system << "Modes: eval | parameter | horizon | analyze" << std::endl;
         return 1;
     }
 
@@ -291,7 +416,7 @@ int main(int argc, char *argv[])
     std::string config_name = argv[2];
 
     if (mode == "eval") RunEval(config_name);
-    else if (mode == "sweep") RunSweep(config_name);
+    else if (mode == "parameter") RunParameterEvaluation(config_name);
     else if (mode == "horizon") RunHorizon(config_name);
     else if (mode == "analyze") RunAnalyze(config_name);
     else
