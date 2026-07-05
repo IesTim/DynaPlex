@@ -273,23 +273,19 @@ void RunParameterEvaluation(const std::string& eval_config_name)
     std::string path_flat;
     parameter_evaluation_config.Get("gca_flat_joint", path_flat);
 
-    system << "Starting parameter evaluation mode: " << parameter
-           << " from " << parameter_min << " to " << parameter_max
-           << " step " << parameter_step << std::endl;
+    system << "Starting parameter evaluation mode: " << parameter << " from " << parameter_min << " to " << parameter_max << " step " << parameter_step << std::endl;
 
     std::vector<VarGroup> parameter_results;
 
     // Generate parameter values
     for (double val = parameter_min; val <= parameter_max + 1e-9; val += parameter_step)
     {
-        system << "Evaluating " << parameter 
-               << " = " << val << std::endl;
+        system << "Evaluating " << parameter << " = " << val << std::endl;
 
-        // Build instance with swept parameter
         VarGroup instance = base_instance;
         instance.Set(parameter, val);
 
-        // Update sigma if mu changes (maintain coefficient of variation)
+        // Update sigma if mu changes
         if (parameter == "mu")
         {
             double base_mu, base_sigma;
@@ -299,12 +295,9 @@ void RunParameterEvaluation(const std::string& eval_config_name)
             instance.Set("sigma", val * cv);
         }
 
-        // Build MDP for this parameter point
-        VarGroup mdp_config = BuildInstanceConfig(
-            instance, train_l_max, "flat_joint");
+        VarGroup mdp_config = BuildInstanceConfig(instance, train_l_max, "flat_joint");
         DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
 
-        // Re-tune CDI for this instance
         double mu, sigma, h, b, c_r, c_e;
         int64_t l_e, l_r;
         instance.Get("mu", mu);
@@ -316,16 +309,13 @@ void RunParameterEvaluation(const std::string& eval_config_name)
         instance.Get("l_e", l_e);
         instance.Get("l_r", l_r);
 
-        // Compute max_val for line search
         auto dist = DiscreteDist::GetAdanEenigeResingDist(mu, sigma);
         auto demand_over_lr = DiscreteDist::GetZeroDist();
         for (int64_t i = 0; i <= l_r; i++)
             demand_over_lr = demand_over_lr.Add(dist);
         int64_t max_val = demand_over_lr.Fractile(b / (b + h));
 
-        // Tune CDI
-        VarGroup cdi_result = TuneCDI(mdp, tuning_config,
-            mu, sigma, b, h, l_r, l_e, max_val);
+        VarGroup cdi_result = TuneCDI(mdp, tuning_config, mu, sigma, b, h, l_r, l_e, max_val);
 
         // Evaluate CDI
         double cdi_cost = 0.0;
@@ -343,14 +333,11 @@ void RunParameterEvaluation(const std::string& eval_config_name)
 
         // Evaluate GCA-DS
         double gca_cost = 0.0;
-        bool gca_success = EvaluateGCA(
-            mdp, path_flat, sim_config, gca_cost);
+        bool gca_success = EvaluateGCA(mdp, path_flat, sim_config, gca_cost);
 
-        // Record result
         VarGroup point;
         point.Add("value", val);
-        point.Add("in_distribution", 
-            val >= train_min && val <= train_max);
+        point.Add("in_distribution", val >= train_min && val <= train_max);
         point.Add("CDI_cost", cdi_cost);
         point.Add("CDI_S_r", int64_t(0));
         point.Add("CDI_S_e", int64_t(0));
@@ -364,8 +351,7 @@ void RunParameterEvaluation(const std::string& eval_config_name)
 
         system << "  CDI: " << cdi_cost;
         if (gca_success)
-            system << "  GCA: " << gca_cost 
-                   << "  gap: " << ComputeGap(gca_cost, cdi_cost) << "%";
+            system << "  GCA: " << gca_cost << "  gap: " << ComputeGap(gca_cost, cdi_cost) << "%";
         system << std::endl;
     }
 
@@ -377,9 +363,7 @@ void RunParameterEvaluation(const std::string& eval_config_name)
     output.Add("train_max", train_max);
     output.Add("parameter_points", parameter_results);
 
-    auto out_path = system.filepath(
-        "dual_sourcing_backlog", 
-        "parameter_" + parameter + ".json");
+    auto out_path = system.filepath("dual_sourcing_backlog", "parameter_" + parameter + ".json");
     output.SaveToFile(out_path, 4);
     system << "Parameter evaluation complete. Results saved." << std::endl;
 }

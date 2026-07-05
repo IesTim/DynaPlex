@@ -39,6 +39,12 @@ namespace DynaPlex::Models {
                 int64_t MaxOrderSize;
 
                 DynaPlex::VarGroup ToVarGroup() const;
+
+                int64_t n_obs;
+                double sum_demand;
+                double sum_sq_demand;
+                double mu_hat;
+                double sigma_hat;
             };
 
             using Event = int64_t;
@@ -54,7 +60,8 @@ namespace DynaPlex::Models {
             void GetFeatures(const State&, DynaPlex::Features&) const;
             explicit MDP(const DynaPlex::VarGroup&);
             void RegisterPolicies(DynaPlex::Erasure::PolicyRegistry<MDP>&) const;
-            std::string action_representation;  // "flat_joint", "multi_discrete", "sequential"
+            std::string action_representation;  // "flat_joint", "sequential"
+            bool use_estimation;
         };
     }
 }

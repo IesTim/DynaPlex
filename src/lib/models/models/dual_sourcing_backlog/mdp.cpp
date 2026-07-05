@@ -39,6 +39,11 @@ namespace DynaPlex::Models {
             else
                 action_representation = "flat_joint";
 
+            if (config.HasKey("use_estimation"))
+                config.Get("use_estimation", use_estimation);
+            else
+                use_estimation = false;
+
             // checks:
             if (K < 2)
                 throw DynaPlex::Error("dual_sourcing_backlog: K must be >= 2.");
@@ -175,6 +180,15 @@ namespace DynaPlex::Models {
             inventory -= event;
             state.total_inv -= event;
 
+            state.n_obs++;
+            state.sum_demand += static_cast<double>(event);
+            state.sum_sq_demand += static_cast<double>(event * event);
+            state.mu_hat = state.sum_demand / state.n_obs;
+
+            double mean_sq = state.sum_sq_demand / state.n_obs;
+            double var_hat = std::max(mean_sq - state.mu_hat * state.mu_hat, DiscreteDist::LeastVarianceRequiredForAERFit(state.mu_hat));
+            state.sigma_hat = std::sqrt(var_hat);
+
             double cost = state.h * static_cast<double>(std::max(static_cast<int64_t>(0), inventory)) + state.b * static_cast<double>(std::max(static_cast<int64_t>(0), -inventory));
 
             state.state_vector.push_back(0);
@@ -190,8 +204,8 @@ namespace DynaPlex::Models {
         void MDP::GetFeatures(const State& state, DynaPlex::Features& features) const {
             features.Add(state.state_vector);
 
-            features.Add(state.mu);
-            features.Add(state.sigma);
+            features.Add(state.mu_hat);
+            features.Add(state.sigma_hat);
 
             features.Add(state.h);
             features.Add(state.b);
@@ -221,6 +235,11 @@ namespace DynaPlex::Models {
             vars.Get("current_source", state.current_source);
             vars.Get("pending_orders", state.pending_orders);
             vars.Get("MaxOrderSize", state.MaxOrderSize);
+            vars.Get("n_obs", state.n_obs);
+            vars.Get("sum_demand", state.sum_demand);
+            vars.Get("sum_sq_demand", state.sum_sq_demand);
+            vars.Get("mu_hat", state.mu_hat);
+            vars.Get("sigma_hat", state.sigma_hat);
             return state;
         }
 
@@ -241,6 +260,11 @@ namespace DynaPlex::Models {
             vars.Add("current_source", current_source);
             vars.Add("pending_orders", pending_orders);
             vars.Add("MaxOrderSize", MaxOrderSize);
+            vars.Add("n_obs", n_obs);
+            vars.Add("sum_demand", sum_demand);
+            vars.Add("sum_sq_demand", sum_sq_demand);
+            vars.Add("mu_hat", mu_hat);
+            vars.Add("sigma_hat", sigma_hat);
             return vars;
         }
 
@@ -288,6 +312,11 @@ namespace DynaPlex::Models {
 
             state.cat = StateCategory::AwaitAction();
 
+            state.mu_hat = (min_mu + max_mu) / 2;
+            state.sigma_hat = (min_mu + max_mu) / 2.0;
+            state.n_obs = 0;
+            state.sum_demand = 0.0;
+            state.sum_sq_demand = 0.0;  
             return state;
 
         }
