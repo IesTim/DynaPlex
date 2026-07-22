@@ -83,7 +83,7 @@ void RunEval(const std::string &eval_config_name)
     eval_config.Get("gca_sequential", path_sequential);
 
     // Load instances
-    VarGroup instances_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples","dual_sourcing_backlog", "instances_config.json"));
+    VarGroup instances_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "instances_config.json"));
     std::vector<VarGroup> instances;
     instances_config.Get("instances", instances);
 
@@ -241,10 +241,10 @@ void RunEval(const std::string &eval_config_name)
 }
 
 // Parameter evaluation
-void RunParameterEvaluation(const std::string& eval_config_name)
+void RunParameterEvaluation(const std::string &eval_config_name)
 {
-    auto& dp = DynaPlexProvider::Get();
-    auto& system = dp.System();
+    auto &dp = DynaPlexProvider::Get();
+    auto &system = dp.System();
 
     // Load config
     VarGroup parameter_evaluation_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", eval_config_name));
@@ -280,7 +280,8 @@ void RunParameterEvaluation(const std::string& eval_config_name)
     // Generate parameter values
     for (double val = parameter_min; val <= parameter_max + 1e-9; val += parameter_step)
     {
-        system << "Evaluating " << parameter << " = " << val << std::endl;
+        system << "Evaluating " << parameter
+               << " = " << val << std::endl;
 
         VarGroup instance = base_instance;
         instance.Set(parameter, val);
@@ -315,7 +316,9 @@ void RunParameterEvaluation(const std::string& eval_config_name)
             demand_over_lr = demand_over_lr.Add(dist);
         int64_t max_val = demand_over_lr.Fractile(b / (b + h));
 
-        VarGroup cdi_result = TuneCDI(mdp, tuning_config, mu, sigma, b, h, l_r, l_e, max_val);
+        // Tune CDI
+        VarGroup cdi_result = TuneCDI(mdp, tuning_config,
+                                      mu, sigma, b, h, l_r, l_e, max_val);
 
         // Evaluate CDI
         double cdi_cost = 0.0;
@@ -337,7 +340,8 @@ void RunParameterEvaluation(const std::string& eval_config_name)
 
         VarGroup point;
         point.Add("value", val);
-        point.Add("in_distribution", val >= train_min && val <= train_max);
+        point.Add("in_distribution",
+                  val >= train_min && val <= train_max);
         point.Add("CDI_cost", cdi_cost);
         point.Add("CDI_S_r", int64_t(0));
         point.Add("CDI_S_e", int64_t(0));
@@ -351,7 +355,8 @@ void RunParameterEvaluation(const std::string& eval_config_name)
 
         system << "  CDI: " << cdi_cost;
         if (gca_success)
-            system << "  GCA: " << gca_cost << "  gap: " << ComputeGap(gca_cost, cdi_cost) << "%";
+            system << "  GCA: " << gca_cost
+                   << "  gap: " << ComputeGap(gca_cost, cdi_cost) << "%";
         system << std::endl;
     }
 
@@ -363,17 +368,143 @@ void RunParameterEvaluation(const std::string& eval_config_name)
     output.Add("train_max", train_max);
     output.Add("parameter_points", parameter_results);
 
-    auto out_path = system.filepath("dual_sourcing_backlog", "parameter_" + parameter + ".json");
+    auto out_path = system.filepath(
+        "dual_sourcing_backlog",
+        "parameter_" + parameter + ".json");
     output.SaveToFile(out_path, 4);
     system << "Parameter evaluation complete. Results saved." << std::endl;
 }
 
 // Horizon evaluation
+template <typename StateType>
+double SimulatePeriod(DynaPlex::MDP &mdp, DynaPlex::Policy &policy, StateType &state, DynaPlex::RNG &rng)
+{
+    double cost = 0.0;
+
+    while (mdp->GetStateCategory(state).IsAwaitAction())
+    {
+        int64_t action = policy->GetAction(state);
+        cost += mdp->ModifyStateWithAction(state, action);
+    }
+
+    auto event = mdp->GetEvent(state, rng);
+    cost += mdp->ModifyStateWithEvent(state, event);
+
+    return cost;
+}
+
 void RunHorizon(const std::string &eval_config_name)
 {
     auto &dp = DynaPlexProvider::Get();
     auto &system = dp.System();
-    system << "Horizon mode not yet implemented." << std::endl;
+
+    VarGroup horizon_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", eval_config_name));
+
+    VarGroup instance;
+    horizon_config.Get("instance", instance);
+
+    int64_t train_l_max;
+    horizon_config.Get("train_l_max", train_l_max);
+
+    int64_t num_trajectories, periods_per_trajectory;
+    horizon_config.Get("number_of_trajectories", num_trajectories);
+    horizon_config.Get("periods_per_trajectory", periods_per_trajectory);
+
+    VarGroup tuning_config;
+    horizon_config.Get("tuning", tuning_config);
+
+    std::string gca_policy_path;
+    std::string action_repr;
+    horizon_config.Get("gca_policy", gca_policy_path);
+    horizon_config.Get("action_representation", action_repr);
+
+    double mu, sigma, h, b, c_r, c_e;
+    int64_t l_e, l_r;
+    instance.Get("mu", mu);
+    instance.Get("sigma", sigma);
+    instance.Get("h", h);
+    instance.Get("b", b);
+    instance.Get("c_r", c_r);
+    instance.Get("c_e", c_e);
+    instance.Get("l_e", l_e);
+    instance.Get("l_r", l_r);
+
+    system << "Starting horizon mode..." << std::endl;
+    system << "Action representation: " << action_repr << std::endl;
+    system << "Trajectories: " << num_trajectories
+           << " Periods: " << periods_per_trajectory << std::endl;
+
+    VarGroup mdp_config = BuildInstanceConfig(instance, train_l_max, action_repr);
+    DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
+
+    auto dist_bound = DiscreteDist::GetAdanEenigeResingDist(mu, sigma);
+    auto demand_bound = DiscreteDist::GetZeroDist();
+    for (int64_t i = 0; i <= l_r; i++)
+        demand_bound = demand_bound.Add(dist_bound);
+    int64_t max_val = demand_bound.Fractile(b / (b + h));
+
+    system << "Tuning clairvoyant CDI..." << std::endl;
+    VarGroup cdi_result = TuneCDI(mdp, tuning_config, mu, sigma, b, h, l_r, l_e, max_val);
+
+    int64_t S_r, S_e;
+    cdi_result.Get("S_r", S_r);
+    cdi_result.Get("S_e", S_e);
+
+    VarGroup cdi_policy_config;
+    cdi_policy_config.Add("id", std::string("cdi"));
+    cdi_policy_config.Add("S_r", S_r);
+    cdi_policy_config.Add("S_e", S_e);
+    auto cdi_policy = mdp->GetPolicy(cdi_policy_config);
+
+    auto full_path = system.filepath("dual_sourcing_backlog", gca_policy_path);
+    auto gca_policy = dp.LoadPolicy(mdp, full_path);
+
+    system << "Running simulation..." << std::endl;
+
+    std::vector<double> gca_costs(periods_per_trajectory, 0.0);
+    std::vector<double> cdi_costs(periods_per_trajectory, 0.0);
+
+    // Simulation
+    for (int64_t traj = 0; traj < num_trajectories; traj++)
+    {
+        DynaPlex::RNG rng_gca{true, traj};
+        DynaPlex::RNG rng_cdi{true, traj};
+
+        auto gca_state = mdp->GetInitialState();
+        auto cdi_state = mdp->GetInitialState();
+
+        for (int64_t t = 0; t < periods_per_trajectory; t++)
+        {
+            gca_costs[t] += SimulatePeriod(mdp, gca_policy, gca_state, rng_gca);
+            cdi_costs[t] += SimulatePeriod(mdp, cdi_policy, cdi_state, rng_cdi);
+        }
+    }
+
+    std::vector<VarGroup> periods_output;
+    for (int64_t t = 0; t < periods_per_trajectory; t++)
+    {
+        double gca_avg = gca_costs[t] / num_trajectories;
+        double cdi_avg = cdi_costs[t] / num_trajectories;
+
+        VarGroup p;
+        p.Add("period", t + 1);
+        p.Add("GCA_cost", gca_avg);
+        p.Add("CDI_cost", cdi_avg);
+        p.Add("gap_pct", ComputeGap(gca_avg, cdi_avg));
+        periods_output.push_back(p);
+    }
+
+    VarGroup output;
+    output.Add("experiment", std::string("online_estimation"));
+    output.Add("instance", instance);
+    output.Add("action_representation", action_repr);
+    output.Add("num_trajectories", num_trajectories);
+    output.Add("CDI_params", cdi_result);
+    output.Add("periods", periods_output);
+
+    auto out_path = system.filepath("dual_sourcing_backlog", "horizon_results.json");
+    output.SaveToFile(out_path, 4);
+    system << "Horizon complete. Results saved." << std::endl;
 }
 
 // Structural comparison
@@ -399,10 +530,14 @@ int main(int argc, char *argv[])
     std::string mode = argv[1];
     std::string config_name = argv[2];
 
-    if (mode == "eval") RunEval(config_name);
-    else if (mode == "parameter") RunParameterEvaluation(config_name);
-    else if (mode == "horizon") RunHorizon(config_name);
-    else if (mode == "analyze") RunAnalyze(config_name);
+    if (mode == "eval")
+        RunEval(config_name);
+    else if (mode == "parameter")
+        RunParameterEvaluation(config_name);
+    else if (mode == "horizon")
+        RunHorizon(config_name);
+    else if (mode == "analyze")
+        RunAnalyze(config_name);
     else
     {
         system << "Unknown mode: " << mode << std::endl;
