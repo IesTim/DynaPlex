@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
     std::string timestamp = ts.str();
     std::string run_name = action_repr + "_" + mdp_config_base + "_" + dcl_config_base + "_" + timestamp;
 
-    auto path = system.filepath("dual_sourcing_backlog", "runs", run_name, "policy_final");
+    auto path = system.filepath("dual_sourcing", "runs", run_name, "policy_final");
 
     VarGroup run_info;
     run_info.Add("action_representation", action_repr);
