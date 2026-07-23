@@ -1,7 +1,6 @@
 ###############################################################################
 # Set default behavior to automatically normalize line endings.
 * text=auto
-
 # Ensure that .scr and .job files always have linux line endings
 *.sh text eol=lf
 *.slurm text eol=lf
