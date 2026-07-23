@@ -3,7 +3,7 @@ set -e
 
 # settings
 REPO_DIR="/home/ies/Repositories/DynaPlex"
-IO_DIR="/home/ies/DynaPlex_IO/IO_DynaPlex"
+IO_DIR="/home/ies/Repositories/DynaPlex/IO_DynaPlex"
 EXECUTABLE="./out/LinRel/bin/dual_sourcing_gca"
 DCL_CONFIG="${1:-dcl_config_0.json}"
 MDP_CONFIG="${2:-mdp_config_0.json}"
@@ -34,8 +34,11 @@ cmake --build out/LinRel --target dual_sourcing_gca -j 128
 echo "Build complete"
 
 echo "Starting training"
+
+set +e
 $EXECUTABLE "$DCL_CONFIG" "$MDP_CONFIG"
 EXIT_CODE=$?
+set -e
 
 if [ $EXIT_CODE -eq 0 ]; then
     echo "Training complete"
