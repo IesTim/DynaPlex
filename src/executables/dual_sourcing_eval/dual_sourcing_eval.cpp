@@ -88,7 +88,7 @@ void RunEval(const std::string &eval_config_name)
     instances_config.Get("instances", instances);
 
     // Load tuned heuristic parameters
-    VarGroup tuned = VarGroup::LoadFromFile(system.filepath("dual_sourcing_backlog", "tuned_heuristic_params.json"));
+    VarGroup tuned = VarGroup::LoadFromFile(system.filepath("dual_sourcing", "tuning", "tuned_heuristic_params.json"));
     std::vector<VarGroup> tuned_instances;
     tuned.Get("tuned_policies", tuned_instances);
 
@@ -113,11 +113,8 @@ void RunEval(const std::string &eval_config_name)
 
         instance_result.Add("parameters", instance);
 
-        // -----------------------------------------------
         // Evaluate heuristics
-        // -----------------------------------------------
         double cdi_cost = 0.0;
-
         {
             VarGroup cdi_params;
             tuned_inst.Get("CDI", cdi_params);
@@ -235,7 +232,7 @@ void RunEval(const std::string &eval_config_name)
     output.Add("experiment", std::string("benchmark_comparison"));
     output.Add("instances", results);
 
-    auto out_path = system.filepath("dual_sourcing_backlog", "benchmark_results.json");
+    auto out_path = system.filepath("dual_sourcing_backlog", "evaluation", "benchmark_results.json");
     output.SaveToFile(out_path, 4);
     system << "Eval complete. Results saved." << std::endl;
 }
@@ -368,9 +365,7 @@ void RunParameterEvaluation(const std::string &eval_config_name)
     output.Add("train_max", train_max);
     output.Add("parameter_points", parameter_results);
 
-    auto out_path = system.filepath(
-        "dual_sourcing_backlog",
-        "parameter_" + parameter + ".json");
+    auto out_path = system.filepath("dual_sourcing_backlog", "", "parameter_" + parameter + ".json");
     output.SaveToFile(out_path, 4);
     system << "Parameter evaluation complete. Results saved." << std::endl;
 }
@@ -502,7 +497,7 @@ void RunHorizon(const std::string &eval_config_name)
     output.Add("CDI_params", cdi_result);
     output.Add("periods", periods_output);
 
-    auto out_path = system.filepath("dual_sourcing_backlog", "horizon_results.json");
+    auto out_path = system.filepath("dual_sourcing_backlog", "evaluation", "horizon_results.json");
     output.SaveToFile(out_path, 4);
     system << "Horizon complete. Results saved." << std::endl;
 }

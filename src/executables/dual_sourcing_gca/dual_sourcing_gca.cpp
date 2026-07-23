@@ -1,5 +1,9 @@
 #include <iostream>
 #include "dynaplex/dynaplexprovider.h"
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 
 using namespace DynaPlex;
 
@@ -11,13 +15,13 @@ int main(int argc, char *argv[])
 
     std::string mdp_config_name = "mdp_config_0.json";
     std::string mdp_config_base = "mdp_config_0";
-    
+
     if (argc > 1)
         dcl_config_name = argv[1];
-        dcl_config_base = dcl_config_name.substr(0, dcl_config_name.find('.'));
+    dcl_config_base = dcl_config_name.substr(0, dcl_config_name.find('.'));
     if (argc > 2)
         mdp_config_name = argv[2];
-        mdp_config_base = mdp_config_name.substr(0, mdp_config_name.find('.'));
+    mdp_config_base = mdp_config_name.substr(0, mdp_config_name.find('.'));
 
     auto &dp = DynaPlexProvider::Get();
     auto &system = dp.System();
@@ -41,7 +45,26 @@ int main(int argc, char *argv[])
     std::string action_repr;
     mdp_config.Get("action_representation", action_repr);
 
-    auto path = system.filepath("dual_sourcing_backlog", "GCA-DS_" + action_repr + "_" + mdp_config_base + "_" + dcl_config_base);
+    auto now = std::chrono::system_clock::now();
+    std::time_t time_t_now = std::chrono::system_clock::to_time_t(now);
+    std::tm tm_now{};
+    localtime_s(&tm_now, &time_t_now);
+    std::ostringstream ts;
+    ts << std::put_time(&tm_now, "%Y%m%d_%H%M%S");
+    std::string timestamp = ts.str();
+    std::string run_name = action_repr + "_" + mdp_config_base + "_" + dcl_config_base + "_" + timestamp;
+
+    auto path = system.filepath("dual_sourcing_backlog", "runs", run_name, "policy_final");
+
+    VarGroup run_info;
+    run_info.Add("action_representation", action_repr);
+    run_info.Add("mdp_config", mdp_config_name);
+    run_info.Add("dcl_config", dcl_config_name);
+    run_info.Add("timestamp", timestamp);
+    run_info.Add("num_gens", num_gens);
+    run_info.Add("mdp_identifier", mdp->Identifier());
+
+    run_info.SaveToFile(system.filepath("dual_sourcing", "runs", run_name, "run_info.json"), 4);
 
     system << "Action representation: " << action_repr << std::endl;
     system << "Training for " << num_gens << " generations..." << std::endl;
