@@ -40,7 +40,7 @@ EXIT_CODE=$?
 if [ $EXIT_CODE -eq 0 ]; then
     echo "Training complete"
     echo "Start pushing..."
-    git add -A
+    git add "$IO_DIR/dual_sourcing/"
     git commit -m "Beast Run: $START_DATETIME $RUN_ID"
     git push 
     notify "FINISH - Beast Run: [$START_DATETIME] $RUN_ID"
