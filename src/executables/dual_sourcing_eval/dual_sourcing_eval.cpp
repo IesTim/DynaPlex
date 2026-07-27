@@ -89,8 +89,8 @@ void RunEval(const std::string &eval_config_name)
 
     // Load tuned heuristic parameters
     VarGroup tuned = VarGroup::LoadFromFile(system.filepath("dual_sourcing", "tuning", "tuned_heuristic_params.json"));
-    std::vector<VarGroup> tuned_instances;
-    tuned.Get("tuned_policies", tuned_instances);
+    std::vector<VarGroup> tuned_policies;
+    tuned.Get("tuned_policies", tuned_policies);
 
     system << "Starting eval mode on " << instances.size() << " instances..." << std::endl;
 
@@ -99,7 +99,7 @@ void RunEval(const std::string &eval_config_name)
     for (size_t i = 0; i < instances.size(); i++)
     {
         auto &instance = instances[i];
-        auto &tuned_inst = tuned_instances[i];
+        auto &tuned_policy = tuned_policies[i];
 
         std::string name;
         instance.Get("name", name);
@@ -117,7 +117,7 @@ void RunEval(const std::string &eval_config_name)
         double cdi_cost = 0.0;
         {
             VarGroup cdi_params;
-            tuned_inst.Get("CDI", cdi_params);
+            tuned_policy.Get("CDI", cdi_params);
             int64_t S_r, S_e;
             cdi_params.Get("S_r", S_r);
             cdi_params.Get("S_e", S_e);
@@ -138,7 +138,7 @@ void RunEval(const std::string &eval_config_name)
 
         {
             VarGroup di_params;
-            tuned_inst.Get("DI", di_params);
+            tuned_policy.Get("DI", di_params);
             int64_t S;
             di_params.Get("S", S);
             VarGroup policy_config;
@@ -156,7 +156,7 @@ void RunEval(const std::string &eval_config_name)
 
         {
             VarGroup si_params;
-            tuned_inst.Get("SI", si_params);
+            tuned_policy.Get("SI", si_params);
             int64_t S;
             si_params.Get("S", S);
             VarGroup policy_config;
@@ -174,7 +174,7 @@ void RunEval(const std::string &eval_config_name)
 
         {
             VarGroup tbs_params;
-            tuned_inst.Get("TBS", tbs_params);
+            tuned_policy.Get("TBS", tbs_params);
             int64_t S_e, c;
             tbs_params.Get("S_e", S_e);
             tbs_params.Get("c", c);
