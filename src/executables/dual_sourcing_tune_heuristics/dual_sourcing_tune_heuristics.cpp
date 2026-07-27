@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
     VarGroup output;
     output.Add("tuned_policies", results);
 
-    auto output_path = system.filepath("dual_sourcing", "tuned", "tuned_heuristic_params.json");
+    auto output_path = system.filepath("dual_sourcing", "tuning", "tuned_heuristic_params.json");
     output.SaveToFile(output_path);
 
     system << "Tuning complete. Results saved to: " << output_path << std::endl;

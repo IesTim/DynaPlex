@@ -52,7 +52,7 @@ bool EvaluateGCA(DynaPlex::MDP &mdp, const std::string &weights_path, const VarG
     auto &system = dp.System();
     try
     {
-        auto full_path = system.filepath("dual_sourcing_backlog", weights_path);
+        auto full_path = system.filepath("dual_sourcing", "runs", weights_path, "policy_final");
         auto policy = dp.LoadPolicy(mdp, full_path);
         cost_out = EvaluatePolicyTuning(mdp, policy, sim_config);
         return true;
@@ -232,7 +232,7 @@ void RunEval(const std::string &eval_config_name)
     output.Add("experiment", std::string("benchmark_comparison"));
     output.Add("instances", results);
 
-    auto out_path = system.filepath("dual_sourcing_backlog", "evaluation", "benchmark_results.json");
+    auto out_path = system.filepath("dual_sourcing", "evaluation", "benchmark_results.json");
     output.SaveToFile(out_path, 4);
     system << "Eval complete. Results saved." << std::endl;
 }
@@ -365,7 +365,7 @@ void RunParameterEvaluation(const std::string &eval_config_name)
     output.Add("train_max", train_max);
     output.Add("parameter_points", parameter_results);
 
-    auto out_path = system.filepath("dual_sourcing_backlog", "", "parameter_" + parameter + ".json");
+    auto out_path = system.filepath("dual_sourcing", "evaluation", "parameter_" + parameter + ".json");
     output.SaveToFile(out_path, 4);
     system << "Parameter evaluation complete. Results saved." << std::endl;
 }
@@ -451,7 +451,7 @@ void RunHorizon(const std::string &eval_config_name)
     cdi_policy_config.Add("S_e", S_e);
     auto cdi_policy = mdp->GetPolicy(cdi_policy_config);
 
-    auto full_path = system.filepath("dual_sourcing_backlog", gca_policy_path);
+    auto full_path = system.filepath("dual_sourcing", "runs", gca_policy_path, "policy_final");
     auto gca_policy = dp.LoadPolicy(mdp, full_path);
 
     system << "Running simulation..." << std::endl;
@@ -497,17 +497,120 @@ void RunHorizon(const std::string &eval_config_name)
     output.Add("CDI_params", cdi_result);
     output.Add("periods", periods_output);
 
-    auto out_path = system.filepath("dual_sourcing_backlog", "evaluation", "horizon_results.json");
+    auto out_path = system.filepath("dual_sourcing", "evaluation", "horizon_results.json");
     output.SaveToFile(out_path, 4);
     system << "Horizon complete. Results saved." << std::endl;
 }
 
-// Structural comparison
-void RunAnalyze(const std::string &eval_config_name)
+void RunConvergence(const std::string &eval_config_name)
 {
-    auto &dp = DynaPlexProvider::Get();
-    auto &system = dp.System();
-    system << "Analyze mode not yet implemented." << std::endl;
+    auto& dp = DynaPlexProvider::Get();
+    auto& system = dp.System();
+
+    VarGroup eval_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", eval_config_name));
+
+    VarGroup sim_config;
+    eval_config.Get("simulation", sim_config);
+
+    int64_t periods;
+    sim_config.Get("periods_per_trajectory", periods);
+
+    int64_t train_l_max;
+    eval_config.Get("train_l_max", train_l_max);
+
+    VarGroup conv_config;
+    eval_config.Get("convergence", conv_config);
+
+    std::string run_info_path;
+    conv_config.Get("run_info_path", run_info_path);
+
+    VarGroup run_info = VarGroup::LoadFromFile(system.filepath(run_info_path));
+
+    std::string mdp_identifier, action_repr;
+    run_info.Get("mdp_identifier", mdp_identifier);
+    run_info.Get("action_representation", action_repr);
+
+    VarGroup instances_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "instances_config.json"));
+    std::vector<VarGroup> instances;
+    instances_config.Get("instances", instances);
+
+    VarGroup tuned = VarGroup::LoadFromFile(system.filepath("dual_sourcing", "tuning", "tuned_heuristic_params.json"));
+    std::vector<VarGroup> tuned_instances;
+    tuned.Get("tuned_policies", tuned_instances);
+
+    std::vector<VarGroup> generation_results;
+
+    int64_t gen = 1;
+    while (true) {
+        auto gen_weights_path = system.filepath(mdp_identifier, "dcl_policy_gen" + std::to_string(gen));
+        std::vector<VarGroup> instance_results;
+        bool any_loaded = false;
+
+        for(size_t i = 0; i < instances.size(); i++) {
+            auto& instance = instances[i];
+            auto& tuned_inst = tuned_instances[i];
+
+            std::string inst_name;
+            instance.Get("name", inst_name);
+
+            VarGroup inst_config = BuildInstanceConfig(instance, train_l_max, action_repr);
+            DynaPlex::MDP inst_mdp = dp.GetMDP(inst_config);
+
+            DynaPlex::Policy gen_policy;
+            try {
+                gen_policy = dp.LoadPolicy(inst_mdp, gen_weights_path);
+                any_loaded = true;
+            } catch (const DynaPlex::Error&) {
+                goto save_results;
+            }
+
+            auto comparer = dp.GetPolicyComparer(inst_mdp, sim_config);
+            auto result = comparer.Assess(gen_policy);
+            double cost;
+            result.Get("mean", cost);
+            double cost_per_period = cost / static_cast<double>(periods);
+
+            double cdi_cost = 0.0;
+            {
+                VarGroup cdi_params;
+                tuned_inst.Get("CDI", cdi_params);
+                int64_t S_r, S_e;
+                cdi_params.Get("S_r", S_r);
+                cdi_params.Get("S_e", S_e);
+                VarGroup cdi_policy_config;
+                cdi_policy_config.Add("id", std::string("cdi"));
+                cdi_policy_config.Add("S_r", S_r);
+                cdi_policy_config.Add("S_e", S_e);
+                auto cdi_policy = inst_mdp->GetPolicy(cdi_policy_config);
+                auto cdi_result = comparer.Assess(cdi_policy);
+                double cdi_raw;
+                cdi_result.Get("mean", cdi_raw);
+                cdi_cost = cdi_raw / static_cast<double>(periods);
+            }
+
+            VarGroup inst_result;
+            inst_result.Add("instance", inst_name);
+            inst_result.Add("cost", cost_per_period);
+            inst_result.Add("gap_vs_CDI_pct", ComputeGap(cost_per_period, cdi_cost));
+            instance_results.push_back(inst_result);
+        }
+
+        VarGroup gen_result;
+        gen_result.Add("generation", gen);
+        gen_result.Add("instances", instance_results);
+        generation_results.push_back(gen_result);
+        gen++;
+    }
+
+    save_results:
+    VarGroup output;
+    output.Add("experiment", std::string("convergence"));
+    output.Add("action_representation", action_repr);
+    output.Add("generations_evaluated", gen - 1);
+    output.Add("generations", generation_results);
+
+    auto out_path = system.filepath("dual_sourcing", "evaluation", "convergence_" + action_repr + ".json");
+    output.SaveToFile(out_path, 4);
 }
 
 int main(int argc, char *argv[])
@@ -518,7 +621,7 @@ int main(int argc, char *argv[])
     if (argc < 3)
     {
         system << "Usage: dual_sourcing_eval <mode> <config>" << std::endl;
-        system << "Modes: eval | parameter | horizon | analyze" << std::endl;
+        system << "Modes: eval | parameter | horizon | convergence" << std::endl;
         return 1;
     }
 
@@ -531,8 +634,8 @@ int main(int argc, char *argv[])
         RunParameterEvaluation(config_name);
     else if (mode == "horizon")
         RunHorizon(config_name);
-    else if (mode == "analyze")
-        RunAnalyze(config_name);
+    else if (mode == "convergence")
+        RunConvergence(config_name);
     else
     {
         system << "Unknown mode: " << mode << std::endl;
