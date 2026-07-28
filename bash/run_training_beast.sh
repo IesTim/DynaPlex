@@ -6,7 +6,7 @@ REPO_DIR="/home/ies/Repositories/DynaPlex"
 IO_DIR="/home/ies/Repositories/DynaPlex/IO_DynaPlex"
 EXECUTABLE="./out/LinRel/bin/dual_sourcing_gca"
 DCL_CONFIG="${1:-dcl_config_test.json}"
-MDP_CONFIG="${2:-mdp_config_flat_joined.json}"
+MDP_CONFIG="${2:-mdp_config_flat_joint.json}"
 NTFY_TOPIC="ies_beast_621349"
 RUN_ID="DCL=${DCL_CONFIG%.json}_MDP=${MDP_CONFIG%.json}"
 START_DATETIME=$(date '+%Y-%m-%d %H:%M:%S')

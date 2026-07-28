@@ -13,8 +13,8 @@ int main(int argc, char *argv[])
     std::string dcl_config_name = "dcl_config_test.json";
     std::string dcl_config_base = "dcl_config_test";
 
-    std::string mdp_config_name = "mdp_config_flat_joined.json";
-    std::string mdp_config_base = "mdp_config_flat_joined";
+    std::string mdp_config_name = "mdp_config_flat_joint.json";
+    std::string mdp_config_base = "mdp_config_flat_joint";
 
     if (argc > 1)
         dcl_config_name = argv[1];
