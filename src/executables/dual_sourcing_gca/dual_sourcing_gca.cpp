@@ -10,11 +10,11 @@ using namespace DynaPlex;
 int main(int argc, char *argv[])
 {
 
-    std::string dcl_config_name = "dcl_config_0.json";
-    std::string dcl_config_base = "dcl_config_0";
+    std::string dcl_config_name = "dcl_config_test.json";
+    std::string dcl_config_base = "dcl_config_test";
 
-    std::string mdp_config_name = "mdp_config_0.json";
-    std::string mdp_config_base = "mdp_config_0";
+    std::string mdp_config_name = "mdp_config_flat_joined.json";
+    std::string mdp_config_base = "mdp_config_flat_joined";
 
     if (argc > 1)
         dcl_config_name = argv[1];
@@ -27,12 +27,12 @@ int main(int argc, char *argv[])
     auto &system = dp.System();
 
     // load mdp config
-    VarGroup mdp_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", mdp_config_name));
+    VarGroup mdp_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", mdp_config_name));
     DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
     system << "MDP loaded: dual_sourcing_backlog" << std::endl;
 
     // load dcl config
-    VarGroup dcl_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", dcl_config_name));
+    VarGroup dcl_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", dcl_config_name));
 
     int64_t num_gens;
     dcl_config.Get("num_gens", num_gens);

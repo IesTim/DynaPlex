@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
     std::string instances_config_name = "instances_config.json";
     if (argc > 1) instances_config_name = argv[1];
 
-    VarGroup instances_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", instances_config_name));
+    VarGroup instances_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", instances_config_name));
 
     std::vector<VarGroup> instances;
     instances_config.Get("instances", instances);

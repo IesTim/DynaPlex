@@ -5,8 +5,8 @@ set -e
 REPO_DIR="/home/ies/Repositories/DynaPlex"
 IO_DIR="/home/ies/Repositories/DynaPlex/IO_DynaPlex"
 EXECUTABLE="./out/LinRel/bin/dual_sourcing_gca"
-DCL_CONFIG="${1:-dcl_config_0.json}"
-MDP_CONFIG="${2:-mdp_config_0.json}"
+DCL_CONFIG="${1:-dcl_config_test.json}"
+MDP_CONFIG="${2:-mdp_config_flat_joined.json}"
 NTFY_TOPIC="ies_beast_621349"
 RUN_ID="DCL=${DCL_CONFIG%.json}_MDP=${MDP_CONFIG%.json}"
 START_DATETIME=$(date '+%Y-%m-%d %H:%M:%S')
@@ -24,7 +24,8 @@ notify "START - Beast Run: [$START_DATETIME] $RUN_ID"
 
 echo "Pull complete"
 echo "Copying config files to IO directory"
-cp src/lib/models/models/dual_sourcing_backlog/*.json "$IO_DIR/mdp_config_examples/dual_sourcing_backlog/"
+mkdir -p "$IO_DIR/mdp_config_examples/dual_sourcing_backlog/configs/"
+cp src/lib/models/models/dual_sourcing_backlog/configs/*.json "$IO_DIR/mdp_config_examples/dual_sourcing_backlog/configs/"
 echo "Config files copied"
 echo "Building"
 export CXX=g++

@@ -70,7 +70,7 @@ void RunEval(const std::string &eval_config_name)
     auto &system = dp.System();
 
     // Load eval config
-    VarGroup eval_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", eval_config_name));
+    VarGroup eval_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", eval_config_name));
 
     VarGroup sim_config;
     eval_config.Get("simulation", sim_config);
@@ -83,7 +83,7 @@ void RunEval(const std::string &eval_config_name)
     eval_config.Get("gca_sequential", path_sequential);
 
     // Load instances
-    VarGroup instances_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "instances_config.json"));
+    VarGroup instances_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", "instances_config.json"));
     std::vector<VarGroup> instances;
     instances_config.Get("instances", instances);
 
@@ -244,7 +244,7 @@ void RunParameterEvaluation(const std::string &eval_config_name)
     auto &system = dp.System();
 
     // Load config
-    VarGroup parameter_evaluation_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", eval_config_name));
+    VarGroup parameter_evaluation_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", eval_config_name));
 
     // Read parameter settings
     std::string parameter;
@@ -393,7 +393,7 @@ void RunHorizon(const std::string &eval_config_name)
     auto &dp = DynaPlexProvider::Get();
     auto &system = dp.System();
 
-    VarGroup horizon_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", eval_config_name));
+    VarGroup horizon_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", eval_config_name));
 
     VarGroup instance;
     horizon_config.Get("instance", instance);
@@ -507,7 +507,7 @@ void RunConvergence(const std::string &eval_config_name)
     auto& dp = DynaPlexProvider::Get();
     auto& system = dp.System();
 
-    VarGroup eval_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", eval_config_name));
+    VarGroup eval_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", eval_config_name));
 
     VarGroup sim_config;
     eval_config.Get("simulation", sim_config);
@@ -530,7 +530,7 @@ void RunConvergence(const std::string &eval_config_name)
     run_info.Get("mdp_identifier", mdp_identifier);
     run_info.Get("action_representation", action_repr);
 
-    VarGroup instances_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "instances_config.json"));
+    VarGroup instances_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", "instances_config.json"));
     std::vector<VarGroup> instances;
     instances_config.Get("instances", instances);
 
