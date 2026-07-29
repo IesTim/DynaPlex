@@ -1,12 +1,15 @@
 {
-    "N": 10000,
+    "N": 100000,
     "num_gens": 5,
+    "H": 21,
+    "M": 500,
+    "L": 100,
     "SimulateOnlyPromisingActions": true,
-    "Num_Promising_Actions": 8,
+    "Num_Promising_Actions": 16,
     "retrain_lastgen_only": false,
     "nn_architecture": {
         "type": "mlp",
-        "hidden_layers": [256, 128, 128]
+        "hidden_layers": [256, 128, 128, 128]
     },
     "nn_training": {
         "early_stopping_patience": 15,
