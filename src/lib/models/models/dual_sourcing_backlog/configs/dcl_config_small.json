@@ -1,5 +1,5 @@
 {
-    "N": 1000000,
+    "N": 10000,
     "num_gens": 5,
     "SimulateOnlyPromisingActions": true,
     "Num_Promising_Actions": 8,
