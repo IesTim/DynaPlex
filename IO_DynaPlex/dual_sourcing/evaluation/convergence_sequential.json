@@ -1,0 +1,27 @@
+{
+    "action_representation": "sequential",
+    "experiment": "convergence",
+    "generations": [
+        {
+            "generation": 1,
+            "instances": [
+                {
+                    "cost": 1.1220172417693803,
+                    "gap_vs_CDI_pct": -19.56210972966964,
+                    "instance": "instance_1"
+                }
+            ]
+        },
+        {
+            "generation": 2,
+            "instances": [
+                {
+                    "cost": 158.7412237479023,
+                    "gap_vs_CDI_pct": 11280.225420668026,
+                    "instance": "instance_1"
+                }
+            ]
+        }
+    ],
+    "generations_evaluated": 2
+}
