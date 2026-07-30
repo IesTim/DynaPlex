@@ -7,7 +7,7 @@
 
 using namespace DynaPlex;
 
-VarGroup BuildInstanceConfig(const VarGroup &instance, int64_t train_l_max, const std::string &action_representation = "flat_joint")
+VarGroup BuildInstanceConfig(const VarGroup &instance, int64_t train_l_max, double train_max_mu, double train_max_b, const std::string &action_representation = "flat_joint")
 {
     VarGroup config;
     config.Add("id", std::string("dual_sourcing_backlog"));
@@ -30,11 +30,11 @@ VarGroup BuildInstanceConfig(const VarGroup &instance, int64_t train_l_max, cons
     config.Add("min_h", h);
     config.Add("max_h", h);
     config.Add("min_b", b);
-    config.Add("max_b", b);
+    config.Add("max_b", train_max_b);
     config.Add("min_c", c_r);
     config.Add("max_c", c_e);
     config.Add("min_mu", mu);
-    config.Add("max_mu", mu);
+    config.Add("max_mu", train_max_mu);
     config.Add("action_representation", action_representation);
     config.Add("discount_factor", 1.0);
 
@@ -78,6 +78,12 @@ void RunEval(const std::string &eval_config_name)
     int64_t train_l_max;
     eval_config.Get("train_l_max", train_l_max);
 
+    double train_max_mu;
+    eval_config.Get("train_max_mu", train_max_mu);
+
+    double train_max_b;
+    eval_config.Get("train_max_b", train_max_b);
+
     std::string path_flat, path_sequential;
     eval_config.Get("gca_flat_joint", path_flat);
     eval_config.Get("gca_sequential", path_sequential);
@@ -105,7 +111,7 @@ void RunEval(const std::string &eval_config_name)
         instance.Get("name", name);
         system << "Evaluating instance: " << name << std::endl;
 
-        VarGroup mdp_config = BuildInstanceConfig(instance, train_l_max, "flat_joint");
+        VarGroup mdp_config = BuildInstanceConfig(instance, train_l_max, train_max_mu, train_max_b, "flat_joint");
         DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
 
         VarGroup instance_result;
@@ -195,7 +201,7 @@ void RunEval(const std::string &eval_config_name)
 
         // Evaluate GCA-DS flat_joint
         {
-            VarGroup mdp_flat = BuildInstanceConfig(instance, train_l_max, "flat_joint");
+            VarGroup mdp_flat = BuildInstanceConfig(instance, train_l_max, train_max_mu, train_max_b, "flat_joint");
             DynaPlex::MDP mdp_f = dp.GetMDP(mdp_flat);
             double cost = 0.0;
             if (EvaluateGCA(mdp_f, path_flat, sim_config, cost))
@@ -210,7 +216,7 @@ void RunEval(const std::string &eval_config_name)
 
         // Evaluate GCA-DS sequential
         {
-            VarGroup mdp_seq = BuildInstanceConfig(instance, train_l_max, "sequential");
+            VarGroup mdp_seq = BuildInstanceConfig(instance, train_l_max, train_max_mu, train_max_b, "sequential");
             DynaPlex::MDP mdp_s = dp.GetMDP(mdp_seq);
             double cost = 0.0;
             if (EvaluateGCA(mdp_s, path_sequential, sim_config, cost))
@@ -244,31 +250,37 @@ void RunParameterEvaluation(const std::string &eval_config_name)
     auto &system = dp.System();
 
     // Load config
-    VarGroup parameter_evaluation_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", eval_config_name));
+    VarGroup eval_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", eval_config_name));
 
     // Read parameter settings
     std::string parameter;
     double parameter_min, parameter_max, parameter_step;
     double train_min, train_max;
-    parameter_evaluation_config.Get("parameter", parameter);
-    parameter_evaluation_config.Get("parameter_min", parameter_min);
-    parameter_evaluation_config.Get("parameter_max", parameter_max);
-    parameter_evaluation_config.Get("parameter_step", parameter_step);
-    parameter_evaluation_config.Get("train_min", train_min);
-    parameter_evaluation_config.Get("train_max", train_max);
+    eval_config.Get("parameter", parameter);
+    eval_config.Get("parameter_min", parameter_min);
+    eval_config.Get("parameter_max", parameter_max);
+    eval_config.Get("parameter_step", parameter_step);
+    eval_config.Get("train_min", train_min);
+    eval_config.Get("train_max", train_max);
 
     VarGroup base_instance;
-    parameter_evaluation_config.Get("base_instance", base_instance);
+    eval_config.Get("base_instance", base_instance);
 
     int64_t train_l_max;
-    parameter_evaluation_config.Get("train_l_max", train_l_max);
+    eval_config.Get("train_l_max", train_l_max);
+
+    double train_max_mu;
+    eval_config.Get("train_max_mu", train_max_mu);
+
+    double train_max_b;
+    eval_config.Get("train_max_b", train_max_b);
 
     VarGroup sim_config, tuning_config;
-    parameter_evaluation_config.Get("simulation", sim_config);
-    parameter_evaluation_config.Get("tuning", tuning_config);
+    eval_config.Get("simulation", sim_config);
+    eval_config.Get("tuning", tuning_config);
 
     std::string path_flat;
-    parameter_evaluation_config.Get("gca_flat_joint", path_flat);
+    eval_config.Get("gca_flat_joint", path_flat);
 
     system << "Starting parameter evaluation mode: " << parameter << " from " << parameter_min << " to " << parameter_max << " step " << parameter_step << std::endl;
 
@@ -293,7 +305,7 @@ void RunParameterEvaluation(const std::string &eval_config_name)
             instance.Set("sigma", val * cv);
         }
 
-        VarGroup mdp_config = BuildInstanceConfig(instance, train_l_max, "flat_joint");
+        VarGroup mdp_config = BuildInstanceConfig(instance, train_l_max, train_max_mu, train_max_b, "flat_joint");
         DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
 
         double mu, sigma, h, b, c_r, c_e;
@@ -518,6 +530,12 @@ void RunConvergence(const std::string &eval_config_name)
     int64_t train_l_max;
     eval_config.Get("train_l_max", train_l_max);
 
+    double train_max_mu;
+    eval_config.Get("train_max_mu", train_max_mu);
+
+    double train_max_b;
+    eval_config.Get("train_max_b", train_max_b);
+    
     VarGroup conv_config;
     eval_config.Get("convergence", conv_config);
 
@@ -553,7 +571,7 @@ void RunConvergence(const std::string &eval_config_name)
             std::string inst_name;
             instance.Get("name", inst_name);
 
-            VarGroup inst_config = BuildInstanceConfig(instance, train_l_max, action_repr);
+            VarGroup inst_config = BuildInstanceConfig(instance, train_l_max, train_max_mu, train_max_b, action_repr);
             DynaPlex::MDP inst_mdp = dp.GetMDP(inst_config);
 
             DynaPlex::Policy gen_policy;
