@@ -535,7 +535,7 @@ void RunConvergence(const std::string &eval_config_name)
 
     double train_max_b;
     eval_config.Get("train_max_b", train_max_b);
-    
+
     VarGroup conv_config;
     eval_config.Get("convergence", conv_config);
 
@@ -578,7 +578,8 @@ void RunConvergence(const std::string &eval_config_name)
             try {
                 gen_policy = dp.LoadPolicy(inst_mdp, gen_weights_path);
                 any_loaded = true;
-            } catch (const DynaPlex::Error&) {
+            } catch (const DynaPlex::Error& e) {
+                    system << "LoadPolicy failed: " << e.what() << std::endl;
                 goto save_results;
             }
 
