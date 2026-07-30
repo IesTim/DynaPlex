@@ -3,6 +3,7 @@
     "train_max_mu": 12.0,
     "train_max_b": 99.0,
     "train_max_c": 4.0,
+    "train_min_h": 1.0,
     "simulation": {
         "warmup_periods": 100,
         "periods_per_trajectory": 5000,
