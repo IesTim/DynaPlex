@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     dcl_config.Get("num_gens", num_gens);
 
     // Initial CDI policy
-    auto initial_policy = mdp->GetPolicy("cdi");
+    auto initial_policy = mdp->GetPolicy("random");
     system << "Initial policy: CDI" << std::endl;
 
     // output path
