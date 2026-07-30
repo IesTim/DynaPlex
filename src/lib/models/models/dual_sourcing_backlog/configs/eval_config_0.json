@@ -10,7 +10,7 @@
         "number_of_trajectories": 1000
     },
     "convergence": {
-        "run_info_path": "dual_sourcing/runs/sequential_mdp_config_sequential_dcl_config_test_20260730_100402/run_info.json"
+        "run_info_path": "dual_sourcing/runs/sequential_mdp_config_sequential_dcl_config_small_20260730_112943/run_info.json"
     },
     "gca_flat_joint": "GCA-DS_flat_joint_mdp_config_0_dcl_config_0",
     "gca_sequential": "GCA-DS_sequential_mdp_config_0_dcl_config_0"
