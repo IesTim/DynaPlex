@@ -1,6 +1,9 @@
 {
     "N": 5000000,
     "num_gens": 5,
+    "H": 21,
+    "M": 200,
+    "L": 100,
     "SimulateOnlyPromisingActions": true,
     "Num_Promising_Actions": 16,
     "retrain_lastgen_only": false,
