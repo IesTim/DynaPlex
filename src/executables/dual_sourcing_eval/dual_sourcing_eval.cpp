@@ -41,6 +41,37 @@ VarGroup BuildInstanceConfig(const VarGroup &instance, int64_t train_l_max, doub
     return config;
 }
 
+VarGroup BuildPureInstanceConfig(const VarGroup& instance,
+    const std::string& action_representation = "sequential")
+{
+    VarGroup config;
+    config.Add("id", std::string("dual_sourcing_backlog"));
+    config.Add("K", int64_t(2));
+
+    int64_t l_e, l_r;
+    instance.Get("l_e", l_e);
+    instance.Get("l_r", l_r);
+    config.Add("l_min", l_e);
+    config.Add("l_max", l_r);
+
+    double mu, sigma, h, b, c_r, c_e;
+    instance.Get("mu", mu);
+    instance.Get("sigma", sigma);
+    instance.Get("h", h);
+    instance.Get("b", b);
+    instance.Get("c_r", c_r);
+    instance.Get("c_e", c_e);
+
+    config.Add("min_h", h);   config.Add("max_h", h);
+    config.Add("min_b", b);   config.Add("max_b", b);
+    config.Add("min_c", c_r); config.Add("max_c", c_e);
+    config.Add("min_mu", mu); config.Add("max_mu", mu);
+    config.Add("action_representation", action_representation);
+    config.Add("discount_factor", 1.0);
+
+    return config;
+}
+
 double ComputeGap(double policy_cost, double cdi_cost)
 {
     return (policy_cost - cdi_cost) / cdi_cost * 100.0;
@@ -577,35 +608,43 @@ void RunConvergence(const std::string &eval_config_name)
     std::vector<VarGroup> generation_results;
 
     int64_t gen = 1;
-    while (true) {
+
+    while (true)
+    {
         auto gen_weights_path = system.filepath(mdp_identifier, "dcl_policy_gen" + std::to_string(gen));
         std::vector<VarGroup> instance_results;
         bool any_loaded = false;
 
-        for(size_t i = 0; i < instances.size(); i++) {
+        for (size_t i = 0; i < instances.size(); i++)
+        {
             auto& instance = instances[i];
             auto& tuned_inst = tuned_instances[i];
 
             std::string inst_name;
             instance.Get("name", inst_name);
 
-            VarGroup inst_config = BuildInstanceConfig(instance, train_l_max, train_max_mu, train_max_b, train_max_c, train_min_h, action_repr);
-            DynaPlex::MDP inst_mdp = dp.GetMDP(inst_config);
+            VarGroup gca_mdp_config = BuildInstanceConfig(
+                instance, train_l_max, train_max_mu, train_max_b,
+                train_max_c, train_min_h, action_repr);
+            DynaPlex::MDP gca_mdp = dp.GetMDP(gca_mdp_config);
 
             DynaPlex::Policy gen_policy;
-            try {
-                gen_policy = dp.LoadPolicy(inst_mdp, gen_weights_path);
+            try
+            {
+                gen_policy = dp.LoadPolicy(gca_mdp, gen_weights_path);
                 any_loaded = true;
-            } catch (const DynaPlex::Error& e) {
-                    system << "LoadPolicy failed: " << e.what() << std::endl;
+            }
+            catch (const DynaPlex::Error& e)
+            {
+                system << "LoadPolicy failed: " << e.what() << std::endl;
                 goto save_results;
             }
 
-            auto comparer = dp.GetPolicyComparer(inst_mdp, sim_config);
-            auto result = comparer.Assess(gen_policy);
-            double cost;
-            result.Get("mean", cost);
-            double cost_per_period = cost / static_cast<double>(periods);
+            auto gca_comparer = dp.GetPolicyComparer(gca_mdp, sim_config);
+            auto gca_result = gca_comparer.Assess(gen_policy);
+            double gca_raw;
+            gca_result.Get("mean", gca_raw);
+            double cost_per_period = gca_raw / static_cast<double>(periods);
 
             double cdi_cost = 0.0;
             {
@@ -618,8 +657,9 @@ void RunConvergence(const std::string &eval_config_name)
                 cdi_policy_config.Add("id", std::string("cdi"));
                 cdi_policy_config.Add("S_r", S_r);
                 cdi_policy_config.Add("S_e", S_e);
-                auto cdi_policy = inst_mdp->GetPolicy(cdi_policy_config);
-                auto cdi_result = comparer.Assess(cdi_policy);
+                auto cdi_policy = gca_mdp->GetPolicy(cdi_policy_config);
+                auto cdi_comparer = dp.GetPolicyComparer(gca_mdp, sim_config);
+                auto cdi_result = cdi_comparer.Assess(cdi_policy);
                 double cdi_raw;
                 cdi_result.Get("mean", cdi_raw);
                 cdi_cost = cdi_raw / static_cast<double>(periods);
@@ -627,7 +667,8 @@ void RunConvergence(const std::string &eval_config_name)
 
             VarGroup inst_result;
             inst_result.Add("instance", inst_name);
-            inst_result.Add("cost", cost_per_period);
+            inst_result.Add("GCA_cost", cost_per_period);
+            inst_result.Add("CDI_cost", cdi_cost);
             inst_result.Add("gap_vs_CDI_pct", ComputeGap(cost_per_period, cdi_cost));
             instance_results.push_back(inst_result);
         }
