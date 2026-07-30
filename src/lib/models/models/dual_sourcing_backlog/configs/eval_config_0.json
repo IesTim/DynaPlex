@@ -1,5 +1,5 @@
 {
-    "train_l_max": 4,
+    "train_l_max": 5,
     "simulation": {
         "warmup_periods": 100,
         "periods_per_trajectory": 5000,
