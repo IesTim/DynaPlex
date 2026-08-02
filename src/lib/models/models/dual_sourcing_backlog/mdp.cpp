@@ -61,13 +61,15 @@ namespace DynaPlex::Models {
             max_lr = l_max;
             
 
-            // order quantity upperbound on m, now via news vendor fractile
+            // order quantity upperbound on m
             double worst_sigma = max_mu * 2.0;
             DiscreteDist single_dist = DiscreteDist::GetAdanEenigeResingDist(max_mu, worst_sigma);
             DiscreteDist demand_over_lr = DiscreteDist::GetZeroDist();
             for (int64_t i = 0; i < max_lr; i++)
                 demand_over_lr = demand_over_lr.Add(single_dist);
-            MaxOrderSize = demand_over_lr.Fractile(max_b / (max_b + min_h));
+            
+            int64_t MaxOrderSize;
+            config.Get("max_order_size", MaxOrderSize);
 
             // Create all K sized subsets
             std::vector<int64_t> current_tuple;
