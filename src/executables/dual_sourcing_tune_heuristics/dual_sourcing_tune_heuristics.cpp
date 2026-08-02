@@ -37,6 +37,17 @@ VarGroup BuildInstanceConfig(const VarGroup& instance) {
     config.Add("discount_factor", 1.0);
     config.Add("max_order_size", max_order_size);
 
+    VarGroup fixed_instance;
+    fixed_instance.Add("h", h);
+    fixed_instance.Add("b", b);
+    fixed_instance.Add("mu", mu);
+    fixed_instance.Add("sigma", sigma);
+    fixed_instance.Add("l_e", l_e);
+    fixed_instance.Add("l_r", l_r);
+    std::vector<double> costs = {c_e, c_r};
+    fixed_instance.Add("costs", costs);
+    config.Add("fixed_instance", fixed_instance);
+
     return config;
 }
 
