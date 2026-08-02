@@ -19,12 +19,15 @@ VarGroup BuildInstanceConfig(const VarGroup& instance) {
     config.Add("l_max", l_r);
 
     double mu, sigma, h, b, c_r, c_e;
+    int64_t max_order_size;
+
     instance.Get("mu", mu);
     instance.Get("sigma", sigma);
     instance.Get("h", h);
     instance.Get("b", b);
     instance.Get("c_r", c_r);
     instance.Get("c_e", c_e);
+    instance.Get("max_order_size", max_order_size);
     
     config.Add("min_h", h); config.Add("max_h", h);
     config.Add("min_b", b); config.Add("max_b", b);
@@ -32,6 +35,7 @@ VarGroup BuildInstanceConfig(const VarGroup& instance) {
     config.Add("min_mu", mu); config.Add("max_mu", mu);
     config.Add("action_representation", std::string("flat_joint"));
     config.Add("discount_factor", 1.0);
+    config.Add("max_order_size", max_order_size);
 
     return config;
 }
