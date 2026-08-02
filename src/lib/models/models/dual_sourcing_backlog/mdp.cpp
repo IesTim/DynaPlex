@@ -45,6 +45,25 @@ namespace DynaPlex::Models {
             else
                 use_estimation = false;
 
+            use_fixed_instance = false;
+            if (config.HasKey("fixed_instance"))
+            {
+                use_fixed_instance = true;
+                VarGroup fi;
+                config.Get("fixed_instance", fi);
+                fi.Get("h", fixed_h);
+                fi.Get("b", fixed_b);
+                fi.Get("mu", fixed_mu);
+                fi.Get("sigma", fixed_sigma);
+                fi.Get("l_e", fixed_l.first);
+                fi.Get("l_r", fixed_l.second);
+                fixed_c.resize(K);
+                std::vector<double> costs;
+                fi.Get("costs", costs);
+                for (int64_t k = 0; k < K; k++)
+                    fixed_c[k] = costs[k];
+            }
+
             // checks:
             if (K < 2)
                 throw DynaPlex::Error("dual_sourcing_backlog: K must be >= 2.");

@@ -19,6 +19,11 @@ namespace DynaPlex::Models {
             int64_t MaxOrderSize;
             std::vector<std::vector<int64_t>> valid_lead_time_tuples;
 
+            bool use_fixed_instance = false;
+            double fixed_h, fixed_b, fixed_mu, fixed_sigma;
+            std::vector<double> fixed_c;
+            std::vector<int64_t> fixed_l;
+
             struct State {
                 DynaPlex::StateCategory cat;
                 Queue<int64_t> state_vector;
