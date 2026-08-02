@@ -34,6 +34,7 @@ namespace DynaPlex::Models {
             config.Get("max_c", max_c);
             config.Get("min_mu", min_mu);
             config.Get("max_mu", max_mu);
+            config.Get("max_order_size", MaxOrderSize);
             if (config.HasKey("action_representation"))
                 config.Get("action_representation", action_representation);
             else
@@ -68,8 +69,6 @@ namespace DynaPlex::Models {
             for (int64_t i = 0; i < max_lr; i++)
                 demand_over_lr = demand_over_lr.Add(single_dist);
             
-            int64_t MaxOrderSize;
-            config.Get("max_order_size", MaxOrderSize);
 
             // Create all K sized subsets
             std::vector<int64_t> current_tuple;
