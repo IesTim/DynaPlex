@@ -55,8 +55,10 @@ namespace DynaPlex::Models {
                 fi.Get("b", fixed_b);
                 fi.Get("mu", fixed_mu);
                 fi.Get("sigma", fixed_sigma);
-                fi.Get("l_e", fixed_l.first);
-                fi.Get("l_r", fixed_l.second);
+                int64_t l_e, l_r;
+                fi.Get("l_e", l_e);
+                fi.Get("l_r", l_r);
+                fixed_l = {l_e, l_r};
                 fixed_c.resize(K);
                 std::vector<double> costs;
                 fi.Get("costs", costs);
@@ -291,18 +293,32 @@ namespace DynaPlex::Models {
         MDP::State MDP::GetInitialState(DynaPlex::RNG& rng) const {
             State state{};
 
-            int64_t tuple_idx = static_cast<int64_t>(std::floor(rng.genUniform() * valid_lead_time_tuples.size()));
-            state.l = valid_lead_time_tuples[tuple_idx];
+            if (use_fixed_instance)
+            {
+                state.l = fixed_l;
+                state.h = fixed_h;
+                state.b = fixed_b;
+                state.c = fixed_c;
+                state.mu = fixed_mu;
+                state.sigma = fixed_sigma;
+            }
+            else
+            {
+                int64_t tuple_idx = static_cast<int64_t>(std::floor(rng.genUniform() * valid_lead_time_tuples.size()));
+                state.l = valid_lead_time_tuples[tuple_idx];
 
-            state.h = min_h + rng.genUniform() * (max_h - min_h);
-            state.b = min_b + rng.genUniform() * (max_b - min_b);
+                state.h = min_h + rng.genUniform() * (max_h - min_h);
+                state.b = min_b + rng.genUniform() * (max_b - min_b);
 
-            state.c.resize(K);
-            for (int64_t k = 0; k < K; k++)
-                state.c[k] = min_c + rng.genUniform() * (max_c - min_c);
-            std::sort(state.c.begin(), state.c.end(), std::greater<double>());
-            
-            state.mu = min_mu + rng.genUniform() * (max_mu - min_mu);
+                state.c.resize(K);
+                for (int64_t k = 0; k < K; k++)
+                    state.c[k] = min_c + rng.genUniform() * (max_c - min_c);
+                std::sort(state.c.begin(), state.c.end(), std::greater<double>());
+
+                state.mu = min_mu + rng.genUniform() * (max_mu - min_mu);
+            }
+
+
             double min_sigma = std::sqrt(DiscreteDist::LeastVarianceRequiredForAERFit(state.mu));
             double max_sigma = state.mu * 2.0;
             state.sigma = min_sigma + rng.genUniform() * (max_sigma - min_sigma);
