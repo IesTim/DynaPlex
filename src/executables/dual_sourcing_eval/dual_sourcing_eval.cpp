@@ -611,6 +611,9 @@ void RunConvergence(const std::string &eval_config_name)
             VarGroup gca_mdp_config = BuildInstanceConfig(instance, train_l_max, max_order_size, action_repr);
             DynaPlex::MDP gca_mdp = dp.GetMDP(gca_mdp_config);
 
+            VarGroup cdi_mdp_config = BuildInstanceConfig(instance, train_l_max, max_order_size, "flat_joint");
+            DynaPlex::MDP cdi_mdp = dp.GetMDP(cdi_mdp_config);
+
             DynaPlex::Policy gen_policy;
             try
             {
@@ -640,8 +643,8 @@ void RunConvergence(const std::string &eval_config_name)
                 cdi_policy_config.Add("id", std::string("cdi"));
                 cdi_policy_config.Add("S_r", S_r);
                 cdi_policy_config.Add("S_e", S_e);
-                auto cdi_policy = gca_mdp->GetPolicy(cdi_policy_config);
-                auto cdi_comparer = dp.GetPolicyComparer(gca_mdp, sim_config);
+                auto cdi_policy = cdi_mdp->GetPolicy(cdi_policy_config);
+                auto cdi_comparer = dp.GetPolicyComparer(cdi_mdp, sim_config);
                 auto cdi_result = cdi_comparer.Assess(cdi_policy);
                 double cdi_raw;
                 cdi_result.Get("mean", cdi_raw);
