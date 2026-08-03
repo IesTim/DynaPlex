@@ -627,7 +627,7 @@ void RunConvergence(const std::string &eval_config_name)
             auto gca_result = gca_comparer.Assess(gen_policy);
             double gca_raw;
             gca_result.Get("mean", gca_raw);
-            double cost_per_period = gca_raw / static_cast<double>(periods);
+            double cost_per_period = gca_raw;
 
             double cdi_cost = 0.0;
             {
@@ -645,7 +645,7 @@ void RunConvergence(const std::string &eval_config_name)
                 auto cdi_result = cdi_comparer.Assess(cdi_policy);
                 double cdi_raw;
                 cdi_result.Get("mean", cdi_raw);
-                cdi_cost = cdi_raw / static_cast<double>(periods);
+                cdi_cost = cdi_raw;
             }
 
             VarGroup inst_result;

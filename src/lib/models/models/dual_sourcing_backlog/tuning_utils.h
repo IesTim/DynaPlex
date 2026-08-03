@@ -13,9 +13,7 @@ inline double EvaluatePolicyTuning(DynaPlex::MDP& mdp,  DynaPlex::Policy& policy
     auto result = comparer.Assess(policy);
     double cost;
     result.Get("mean", cost);
-    int64_t periods;
-    tuning_config.Get("periods_per_trajectory", periods);
-    return cost / static_cast<double>(periods);
+    return cost;
 }
 
 inline int64_t NewsvendorFractile(double mu, double sigma, double fractile, int64_t lead_time)
