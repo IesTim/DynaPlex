@@ -6,8 +6,9 @@
             "generation": 1,
             "instances": [
                 {
-                    "cost": 1.1220172417693803,
-                    "gap_vs_CDI_pct": -19.56210972966964,
+                    "CDI_cost": 47.45377160000003,
+                    "GCA_cost": 47.052336200000056,
+                    "gap_vs_CDI_pct": -0.8459504618174024,
                     "instance": "instance_1"
                 }
             ]
@@ -16,12 +17,46 @@
             "generation": 2,
             "instances": [
                 {
-                    "cost": 158.7412237479023,
-                    "gap_vs_CDI_pct": 11280.225420668026,
+                    "CDI_cost": 47.45377160000003,
+                    "GCA_cost": 122.30877900000013,
+                    "gap_vs_CDI_pct": 157.74300940918263,
+                    "instance": "instance_1"
+                }
+            ]
+        },
+        {
+            "generation": 3,
+            "instances": [
+                {
+                    "CDI_cost": 47.45377160000003,
+                    "GCA_cost": 166.49070580000006,
+                    "gap_vs_CDI_pct": 250.8482048663966,
+                    "instance": "instance_1"
+                }
+            ]
+        },
+        {
+            "generation": 4,
+            "instances": [
+                {
+                    "CDI_cost": 47.45377160000003,
+                    "GCA_cost": 509035.64217679994,
+                    "gap_vs_CDI_pct": 1072597.9648058147,
+                    "instance": "instance_1"
+                }
+            ]
+        },
+        {
+            "generation": 5,
+            "instances": [
+                {
+                    "CDI_cost": 47.45377160000003,
+                    "GCA_cost": 5850.031508999997,
+                    "gap_vs_CDI_pct": 12227.85363892971,
                     "instance": "instance_1"
                 }
             ]
         }
     ],
-    "generations_evaluated": 2
+    "generations_evaluated": 5
 }
