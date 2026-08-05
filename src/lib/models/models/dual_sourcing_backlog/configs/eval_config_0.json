@@ -6,12 +6,12 @@
         "periods_per_trajectory": 5000,
         "number_of_trajectories": 1000
     },
-    "gca_sequential": "INVULLEN",
+    "gca_sequential": "sequential_mdp_config_sequential_dcl_config_small_20260803_164735",
     "gca_flat_joint": "INVULLEN",
     "gca_sequential_K3": "INVULLEN",
     "gca_flat_joint_K3": "INVULLEN",
     "convergence": {
-        "run_info_path": "dual_sourcing/runs/sequential_mdp_config_sequential_dcl_config_small_20260730_112943/run_info.json"
+        "run_info_path": "dual_sourcing/runs/sequential_mdp_config_sequential_dcl_config_small_20260803_164735/run_info.json"
     },
     "horizon": {
         "instance": {
