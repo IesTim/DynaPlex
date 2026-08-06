@@ -225,7 +225,7 @@ namespace DynaPlex::Models {
 
         void MDP::GetFeatures(const State& state, DynaPlex::Features& features) const {
             features.Add(state.state_vector);
-
+            features.Add(static_cast<double>(state.total_inv));
             features.Add(state.mu_hat);
             features.Add(state.sigma_hat);
 
