@@ -20,6 +20,8 @@ namespace DynaPlex::Models {
             int64_t q_r = std::max(int64_t(0), S_r - (IP_r + q_e));
             q_r = std::min(q_r, mdp->MaxOrderSize);
 
+            if (mdp->action_representation == "sequential")
+                return state.current_source == 0 ? q_r : q_e;
             return q_r * (mdp->MaxOrderSize + 1) + q_e;
         }
 
@@ -33,6 +35,8 @@ namespace DynaPlex::Models {
             int64_t q_r = std::max(int64_t(0), S - IP);
             q_r = std::min(q_r, mdp->MaxOrderSize);
 
+            if (mdp->action_representation == "sequential")
+                return state.current_source == 0 ? q_r : 0;
             return q_r * (mdp->MaxOrderSize + 1);
         }
 
@@ -50,6 +54,8 @@ namespace DynaPlex::Models {
             int64_t q_r = std::max(int64_t(0), S - (IP_r + q_e));
             q_r = std::min(q_r, mdp->MaxOrderSize);
 
+            if (mdp->action_representation == "sequential")
+                return state.current_source == 0 ? q_r : q_e;
             return q_r * (mdp->MaxOrderSize + 1) + q_e;
         }
 
@@ -65,6 +71,8 @@ namespace DynaPlex::Models {
             int64_t q_e = std::max(int64_t(0), S_e - IP);
             q_e = std::min(q_e, mdp->MaxOrderSize);
 
+            if (mdp->action_representation == "sequential")
+                return state.current_source == 0 ? q_r : q_e;
             return q_r * (mdp->MaxOrderSize + 1) + q_e;
         }
     }
