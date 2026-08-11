@@ -1,0 +1,8 @@
+{
+    "action_representation": "flat_joint",
+    "dcl_config": "dcl_config_k2_fast.json",
+    "mdp_config": "mdp_config_k2_narrow_mu_capped_flatjoint.json",
+    "mdp_identifier": "dual_sourcing_backlog_EJo4W1vsYlUydfdi7AB3A7rJVO=D0F96iMDDdAAB8qk__",
+    "num_gens": 3,
+    "timestamp": "20260810_201513"
+}

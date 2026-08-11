@@ -1,0 +1,19 @@
+{
+    "instances": [
+        {
+            "name": "instance_1",
+            "l_e": 1, 
+            "l_r": 4,
+            "mu": 4.0,
+            "sigma": 2.0,
+            "h": 5.0, 
+            "b": 495.0,
+            "c_r": 1.0, "c_e": 4.0 
+        }
+    ],
+    "tuning": {
+        "warmup_periods": 100,
+        "periods_per_trajectory": 2000,
+        "number_of_trajectories": 500
+    }
+}

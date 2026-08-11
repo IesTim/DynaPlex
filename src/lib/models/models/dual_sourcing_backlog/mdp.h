@@ -24,6 +24,23 @@ namespace DynaPlex::Models {
             std::vector<double> fixed_c;
             std::vector<int64_t> fixed_l;
 
+            double inventory_cap_multiplier = 0.0;
+
+            // If non-empty, mu is sampled uniformly from this explicit discrete set instead of
+            // continuously from [min_mu, max_mu] - for testing generalization across a small,
+            // known, finite set of instances rather than a continuous range.
+            std::vector<double> mu_values;
+            // Same idea, extended to the other instance-defining parameters, so that
+            // combinations of them can be varied together across a small discrete set of
+            // instances (rather than each independently continuous). All non-empty *_values
+            // vectors present in a config must have the same instance count (c_values/l_values
+            // flattened with stride K); a single shared index selects the instance each episode,
+            // so e.g. mu_values[i] and b_values[i] together describe instance i.
+            std::vector<double> b_values;
+            std::vector<double> h_values;
+            std::vector<double> c_values;   // flattened, stride K
+            std::vector<int64_t> l_values;  // flattened, stride K
+
             struct State {
                 DynaPlex::StateCategory cat;
                 Queue<int64_t> state_vector;
@@ -32,7 +49,7 @@ namespace DynaPlex::Models {
                 std::vector<int64_t> l;
                 std::vector<double> c;
                 double mu, sigma;
-                
+
                 double h, b;
 
                 std::vector<double> demand_cdf;
@@ -42,6 +59,9 @@ namespace DynaPlex::Models {
                 std::vector<int64_t> pending_orders;
 
                 int64_t MaxOrderSize;
+
+                int64_t backlog_floor;
+                int64_t inventory_ceiling;
 
                 DynaPlex::VarGroup ToVarGroup() const;
 
@@ -63,6 +83,15 @@ namespace DynaPlex::Models {
             State GetInitialState(DynaPlex::RNG& rng) const;
             State GetState(const DynaPlex::VarGroup&) const;
             void GetFeatures(const State&, DynaPlex::Features&) const;
+            // Rollout-control overrides consulted by DCL's SampleGenerator (see mdpadapter.h's
+            // HasStateDependendentH/M/L/RestartCounter dispatch). Without these, SampleGenerator
+            // falls back to reinitiate_counter's default of ~1e6 periods, i.e. trajectories are
+            // effectively never restarted; in a backlog model that lets any policy-driven drift
+            // into a large backlog compound for the rest of the generation instead of resetting.
+            int64_t GetH(const State&) const;
+            int64_t GetM(const State&) const;
+            int64_t GetL(const State&) const;
+            int64_t GetReinitiateCounter(const State&) const;
             explicit MDP(const DynaPlex::VarGroup&);
             void RegisterPolicies(DynaPlex::Erasure::PolicyRegistry<MDP>&) const;
             std::string action_representation;  // "flat_joint", "sequential"

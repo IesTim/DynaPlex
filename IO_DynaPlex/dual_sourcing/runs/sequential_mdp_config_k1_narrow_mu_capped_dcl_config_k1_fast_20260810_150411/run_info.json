@@ -1,0 +1,8 @@
+{
+    "action_representation": "sequential",
+    "dcl_config": "dcl_config_k1_fast.json",
+    "mdp_config": "mdp_config_k1_narrow_mu_capped.json",
+    "mdp_identifier": "dual_sourcing_backlog_oj76gN0mY8vSA4MNvlvUUuuKsZzOExl1uiyZED8MGAY__",
+    "num_gens": 3,
+    "timestamp": "20260810_150411"
+}

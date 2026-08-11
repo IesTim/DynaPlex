@@ -22,6 +22,8 @@ namespace DynaPlex::NN {
         training_config.GetOrDefault("early_stopping_patience", early_stopping_patience, 10);
         training_config.GetOrDefault("max_training_epochs", max_training_epochs, 1000);      
         training_config.GetOrDefault("train_based_on_probs", train_based_on_probs, false);
+        training_config.GetOrDefault("weight_decay", weight_decay, 0.0);
+        training_config.GetOrDefault("smoothness_weight", smoothness_weight, 0.0);
 #if DP_TORCH_AVAILABLE
         torch::manual_seed(static_cast<uint64_t>(rng_seed));
 #endif
@@ -77,7 +79,7 @@ namespace DynaPlex::NN {
 #endif
     }
     	
-	void PolicyTrainer::TrainPolicy(DynaPlex::VarGroup nn_architecture, int64_t generation, std::string path_to_sample_data, bool silent) {
+	double PolicyTrainer::TrainPolicy(DynaPlex::VarGroup nn_architecture, int64_t generation, std::string path_to_sample_data, bool silent) {
 		NeuralNetworkProvider provider(mdp);
         SampleData data{ mdp };
         data.AddFromFile(mdp, path_to_sample_data);
@@ -91,7 +93,7 @@ namespace DynaPlex::NN {
         if (!silent)
             system << nn_architecture.Dump() << std::endl;
         // Set up the optimizer (for example, Adam optimizer).
-        torch::optim::Adam optimizer(any_module_as_nn_module->parameters(), torch::optim::AdamOptions(1e-3).betas({ 0.9,0.999 }).weight_decay(0.0));
+        torch::optim::Adam optimizer(any_module_as_nn_module->parameters(), torch::optim::AdamOptions(1e-3).betas({ 0.9,0.999 }).weight_decay(weight_decay));
             
         int64_t validation_size = std::max(static_cast<int64_t>(0.05 * data.Samples.size()), static_cast<int64_t>(1));
         int64_t training_size = static_cast<int64_t>(data.Samples.size()) - validation_size;
@@ -117,47 +119,71 @@ namespace DynaPlex::NN {
         int64_t epochs_without_improvement = 0;
         float training_loss{ 0.0f };
         float cost_improvement{ 0.0f };
+        float saved_argmax_agreement{ 0.0f };
 
         auto start_time = std::chrono::steady_clock::now();
 
         do {
             std::shuffle(training_data.begin(), training_data.end(), rng.gen());
             float total_training_loss = 0.0;
+            float total_smoothness_loss = 0.0;
             for (int64_t batch = 0; batch < num_batches; batch++) {
-                optimizer.zero_grad();       
+                optimizer.zero_grad();
                 auto [batched_inputs, batched_targets, mask, batched_probs, _] = prepare_batch({ &training_data[batch * mini_batch_size], static_cast<size_t>(mini_batch_size) }, mdp);
 
                 // Forward pass.
-                torch::Tensor output = any_module.forward(batched_inputs) - mask;
+                torch::Tensor raw_output = any_module.forward(batched_inputs);
+                torch::Tensor output = raw_output - mask;
 
+                torch::Tensor loss;
                 if (!train_based_on_probs)
                 {
                     // Calculate the loss.
-                    torch::Tensor loss = torch::nll_loss(torch::log_softmax(output, 1), batched_targets);
-                    total_training_loss += loss.item<float>();
-                    // Backward pass and optimize.
-                    loss.backward();
+                    loss = torch::nll_loss(torch::log_softmax(output, 1), batched_targets);
                 }
                 else {
                     torch::Tensor probs = torch::softmax(output, /*dim=*/1);
                     // Compute cross-entropy loss manually for soft labels.
-                    torch::Tensor loss = -batched_probs * torch::log(probs + 1e-8); // Adding epsilon to avoid log(0)
+                    loss = -batched_probs * torch::log(probs + 1e-8); // Adding epsilon to avoid log(0)
                     loss = loss.sum(1).mean(); // Sum over classes, then average over the batch.
-                    total_training_loss += loss.item<float>();
-                    // Backward pass.
-                    loss.backward();
+                }
+                total_training_loss += loss.item<float>();
+
+                // Smoothness regularizer: penalizes score differences between neighboring
+                // actions on the raw (unmasked) output, so nearby actions - which have
+                // similar real-world consequences - are forced to have similar scores even
+                // when one of them was rarely or never a training candidate.
+                if (smoothness_weight > 0.0)
+                {
+                    torch::Tensor diffs = raw_output.slice(1, 1) - raw_output.slice(1, 0, raw_output.size(1) - 1);
+                    torch::Tensor smoothness_loss = diffs.pow(2).mean();
+                    total_smoothness_loss += smoothness_loss.item<float>();
+                    loss = loss + static_cast<float>(smoothness_weight) * smoothness_loss;
                 }
 
+                // Backward pass and optimize.
+                loss.backward();
                 optimizer.step();
             }
             float average_training_loss = total_training_loss / num_batches;
+            float average_smoothness_loss = total_smoothness_loss / num_batches;
             best_training_loss = std::min(average_training_loss, best_training_loss);
 
             // Disable gradient computation for validation
             torch::NoGradGuard no_grad;
 
             float current_validation_loss = 0.0;
-            torch::Tensor validation_output = any_module.forward(validation_samples) - validation_mask; 
+            torch::Tensor validation_raw_output = any_module.forward(validation_samples);
+            torch::Tensor validation_output = validation_raw_output - validation_mask;
+
+            // Deployment-consistency check: SetArgMaxAction (used at deployment) scans the
+            // full, unmasked output, while training only ever restricts gradient to the
+            // masked/candidate-restricted view. This measures how often those two views
+            // agree on the validation set - a low value means the policy that gets deployed
+            // will often ignore what training actually calibrated.
+            torch::Tensor masked_argmax = validation_output.argmax(1);
+            torch::Tensor raw_argmax = validation_raw_output.argmax(1);
+            float argmax_agreement_rate = (masked_argmax == raw_argmax).to(torch::kFloat32).mean().item<float>();
 
             if (!train_based_on_probs) {
                 torch::Tensor validation_loss = torch::nll_loss(torch::log_softmax(validation_output, 1), validation_targets);
@@ -180,6 +206,7 @@ namespace DynaPlex::NN {
                 best_validation_loss = current_validation_loss;
                 training_loss = average_training_loss;
                 cost_improvement = relative_cost_improvement;
+                saved_argmax_agreement = argmax_agreement_rate;
                 auto saved_model_path = system.filepath(mdp->Identifier(), "temp", "model_weights.pth");
                 torch::save(any_module_as_nn_module, saved_model_path); // Save the model weights
                 epochs_without_improvement = 0; // Reset counter
@@ -206,6 +233,8 @@ namespace DynaPlex::NN {
                         << " - Validation Loss: " << current_validation_loss
                         << " (" << (int)(100 * std::exp(-current_validation_loss)) << "%)"
                         << " - Cost Imp.: " << relative_cost_improvement
+                        << " - Smoothness Loss: " << average_smoothness_loss
+                        << " - Argmax Agreement: " << (int)(100 * argmax_agreement_rate) << "%"
                         << " Time: " << system.Elapsed(elapsed_time)
                         << std::endl;
                 }
@@ -228,6 +257,7 @@ namespace DynaPlex::NN {
             << " - Validation Loss: " << best_validation_loss
             << " (" << (int)(100 * std::exp(-best_validation_loss)) << "%)"
             << " - Cost Improvement : " << cost_improvement
+            << " - Argmax Agreement : " << (int)(100 * saved_argmax_agreement) << "%"
             << std::endl;
         }
 
@@ -251,10 +281,12 @@ namespace DynaPlex::NN {
 
         if (!silent)
             system << "Training finished, total time elapsed: " << system.Elapsed() << std::endl;
+
+        return static_cast<double>(saved_argmax_agreement);
 #else
 		throw DynaPlex::Error("PolicyTrainer::TrainPolicy - Torch not available, cannot train policy. To make torch available, set dynaplex_enable_pytorch to true and dynaplex_pytorch_path to an appropriate path, e.g. in CMakeUserPresets.txt ");
 #endif
-		
+
 	}
 
 }

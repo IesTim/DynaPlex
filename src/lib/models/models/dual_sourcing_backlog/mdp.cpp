@@ -3,10 +3,21 @@
 #include "policies.h"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace DynaPlex::Models {
     namespace dual_sourcing_backlog {
+
+        namespace {
+            int64_t NewsvendorFractile(double mu, double sigma, double fractile, int64_t periods) {
+                DiscreteDist dist = DiscreteDist::GetAdanEenigeResingDist(mu, sigma);
+                DiscreteDist demand_over_lt = DiscreteDist::GetZeroDist();
+                for (int64_t i = 0; i < periods; i++)
+                    demand_over_lt = demand_over_lt.Add(dist);
+                return demand_over_lt.Fractile(fractile);
+            }
+        }
 
         void Register(DynaPlex::Registry& registry) {
             DynaPlex::Erasure::MDPRegistrar<MDP>::RegisterModel(
@@ -15,11 +26,19 @@ namespace DynaPlex::Models {
                 registry);
         }
 
+        int64_t MDP::GetH(const State&) const { return 20; }
+        int64_t MDP::GetM(const State&) const { return 500; }
+        int64_t MDP::GetL(const State&) const { return 100; }
+        int64_t MDP::GetReinitiateCounter(const State&) const { return 100; }
+
         void MDP::RegisterPolicies(DynaPlex::Erasure::PolicyRegistry<MDP>& registry) const {
             registry.Register<CDIPolicy>("cdi", "Constant Dual Index policy with parameters S_r and S_e.");
             registry.Register<DIPolicy>("di", "Dual Index policy with single parameter S.");
-            registry.Register<CDIPolicy>("si", "Single Index policy with orders only from regular source.");
+            registry.Register<SIPolicy>("si", "Single Index policy with orders only from regular source.");
             registry.Register<TBSPolicy>("tbs", "Tailored Base-Surge policy with parameters S_e and c.");
+            registry.Register<BaseStockPolicy>("base_stock", "Standard single-channel order-up-to-S policy. The correct benchmark for K=1.");
+            registry.Register<AdaptiveCDIPolicy>("adaptive_cdi", "CDI with S_r/S_e recomputed each decision from the state's own instance parameters. K=2 only; used as an instance-agnostic behavior/initial policy for wide-distribution DCL training.");
+            registry.Register<AdaptiveBaseStockPolicy>("adaptive_base_stock", "base_stock with S recomputed each decision from the state's own instance parameters. K=1 only; used as an instance-agnostic behavior/initial policy for wide-distribution DCL training.");
         }
 
         MDP::MDP(const DynaPlex::VarGroup& config) {
@@ -45,6 +64,22 @@ namespace DynaPlex::Models {
             else
                 use_estimation = false;
 
+            if (config.HasKey("inventory_cap_multiplier"))
+                config.Get("inventory_cap_multiplier", inventory_cap_multiplier);
+            else
+                inventory_cap_multiplier = 0.0;
+
+            if (config.HasKey("mu_values"))
+                config.Get("mu_values", mu_values);
+            if (config.HasKey("b_values"))
+                config.Get("b_values", b_values);
+            if (config.HasKey("h_values"))
+                config.Get("h_values", h_values);
+            if (config.HasKey("c_values"))
+                config.Get("c_values", c_values);
+            if (config.HasKey("l_values"))
+                config.Get("l_values", l_values);
+
             use_fixed_instance = false;
             if (config.HasKey("fixed_instance"))
             {
@@ -67,8 +102,8 @@ namespace DynaPlex::Models {
             }
 
             // checks:
-            if (K < 2)
-                throw DynaPlex::Error("dual_sourcing_backlog: K must be >= 2.");
+            if (K < 1)
+                throw DynaPlex::Error("dual_sourcing_backlog: K must be >= 1.");
             if (l_min < 1)
                 throw DynaPlex::Error("dual_sourcing_backlog: l_min must be >= 1.");
             if (l_max <= l_min)
@@ -124,7 +159,7 @@ namespace DynaPlex::Models {
                     valid_actions *= (MaxOrderSize + 1);
             }
 
-            vars.Add("valid_actions", MaxOrderSize + 1);
+            vars.Add("valid_actions", valid_actions);
             vars.Add("discount_factor", 1.0);
             vars.Add("horizon_type", "infinite");
             
@@ -154,10 +189,17 @@ namespace DynaPlex::Models {
         double MDP::ModifyStateWithAction(State& state, int64_t action) const {
             std::vector<int64_t> q(K, 0);
 
+            auto clip_to_ceiling = [&](int64_t q_k) {
+                int64_t projected_total = state.total_inv + q_k;
+                if (projected_total > state.inventory_ceiling)
+                    q_k = std::max(int64_t(0), state.inventory_ceiling - state.total_inv);
+                return q_k;
+            };
+
             if (action_representation == "sequential") {
                 int64_t k = state.current_source;
-                q[k] = action;
-            
+                q[k] = clip_to_ceiling(action);
+
                 state.current_source++;
                 if (state.current_source < K) {
                     state.cat = StateCategory::AwaitAction();
@@ -183,6 +225,7 @@ namespace DynaPlex::Models {
 
                 double cost = 0.0;
                 for (int64_t k = 0; k < K; k++) {
+                    q[k] = clip_to_ceiling(q[k]);
                     cost += state.c[k] * q[k];
                     state.state_vector.at(state.l[k] - 1) += q[k];
                     state.total_inv += q[k];
@@ -200,6 +243,8 @@ namespace DynaPlex::Models {
             int64_t inventory = state.state_vector.pop_front();
 
             inventory -= event;
+            if (inventory < state.backlog_floor)
+                inventory = state.backlog_floor;
             state.total_inv -= event;
 
             state.n_obs++;
@@ -224,13 +269,16 @@ namespace DynaPlex::Models {
         }
 
         void MDP::GetFeatures(const State& state, DynaPlex::Features& features) const {
-            features.Add(state.state_vector);
-            features.Add(static_cast<double>(state.total_inv));
+            double scale = std::max(state.mu_hat, 0.1);
+
+            for (const auto& v : state.state_vector)
+                features.Add(static_cast<double>(v) / scale);
+            features.Add(static_cast<double>(state.total_inv) / scale);
             features.Add(state.mu_hat);
             features.Add(state.sigma_hat);
 
             features.Add(state.h);
-            features.Add(state.b);
+            features.Add(state.b / (state.b + state.h));
 
             for (int64_t k = 0; k < K; k++) {
                 features.Add(state.c[k]);
@@ -257,6 +305,8 @@ namespace DynaPlex::Models {
             vars.Get("current_source", state.current_source);
             vars.Get("pending_orders", state.pending_orders);
             vars.Get("MaxOrderSize", state.MaxOrderSize);
+            vars.Get("backlog_floor", state.backlog_floor);
+            vars.Get("inventory_ceiling", state.inventory_ceiling);
             vars.Get("n_obs", state.n_obs);
             vars.Get("sum_demand", state.sum_demand);
             vars.Get("sum_sq_demand", state.sum_sq_demand);
@@ -282,6 +332,8 @@ namespace DynaPlex::Models {
             vars.Add("current_source", current_source);
             vars.Add("pending_orders", pending_orders);
             vars.Add("MaxOrderSize", MaxOrderSize);
+            vars.Add("backlog_floor", backlog_floor);
+            vars.Add("inventory_ceiling", inventory_ceiling);
             vars.Add("n_obs", n_obs);
             vars.Add("sum_demand", sum_demand);
             vars.Add("sum_sq_demand", sum_sq_demand);
@@ -304,18 +356,48 @@ namespace DynaPlex::Models {
             }
             else
             {
-                int64_t tuple_idx = static_cast<int64_t>(std::floor(rng.genUniform() * valid_lead_time_tuples.size()));
-                state.l = valid_lead_time_tuples[tuple_idx];
+                // A single shared index picks the instance for whichever *_values vectors are
+                // present in this config, so e.g. mu_values[i] and b_values[i] jointly describe
+                // instance i; parameters without a *_values vector keep sampling continuously.
+                int64_t instance_count = -1;
+                if (!mu_values.empty()) instance_count = static_cast<int64_t>(mu_values.size());
+                if (!b_values.empty()) instance_count = static_cast<int64_t>(b_values.size());
+                if (!h_values.empty()) instance_count = static_cast<int64_t>(h_values.size());
+                if (!c_values.empty()) instance_count = static_cast<int64_t>(c_values.size() / K);
+                if (!l_values.empty()) instance_count = static_cast<int64_t>(l_values.size() / K);
 
-                state.h = min_h + rng.genUniform() * (max_h - min_h);
-                state.b = min_b + rng.genUniform() * (max_b - min_b);
+                int64_t idx = 0;
+                if (instance_count > 0)
+                    idx = std::min(static_cast<int64_t>(std::floor(rng.genUniform() * instance_count)), instance_count - 1);
+
+                if (!l_values.empty())
+                    state.l.assign(l_values.begin() + idx * K, l_values.begin() + (idx + 1) * K);
+                else
+                {
+                    int64_t tuple_idx = static_cast<int64_t>(std::floor(rng.genUniform() * valid_lead_time_tuples.size()));
+                    state.l = valid_lead_time_tuples[tuple_idx];
+                }
+
+                state.h = !h_values.empty() ? h_values[idx] : (min_h + rng.genUniform() * (max_h - min_h));
+                state.b = !b_values.empty() ? b_values[idx] : (min_b + rng.genUniform() * (max_b - min_b));
 
                 state.c.resize(K);
-                for (int64_t k = 0; k < K; k++)
-                    state.c[k] = min_c + rng.genUniform() * (max_c - min_c);
+                if (!c_values.empty())
+                {
+                    for (int64_t k = 0; k < K; k++)
+                        state.c[k] = c_values[idx * K + k];
+                }
+                else
+                {
+                    for (int64_t k = 0; k < K; k++)
+                        state.c[k] = min_c + rng.genUniform() * (max_c - min_c);
+                }
                 std::sort(state.c.begin(), state.c.end(), std::greater<double>());
 
-                state.mu = min_mu + rng.genUniform() * (max_mu - min_mu);
+                if (!mu_values.empty())
+                    state.mu = mu_values[idx];
+                else
+                    state.mu = min_mu + rng.genUniform() * (max_mu - min_mu);
             }
 
 
@@ -334,6 +416,20 @@ namespace DynaPlex::Models {
 
             state.K = K;
             state.MaxOrderSize = MaxOrderSize;
+
+            if (inventory_cap_multiplier > 0.0)
+            {
+                int64_t max_l = *std::max_element(state.l.begin(), state.l.end());
+                double fractile = state.b / (state.b + state.h);
+                int64_t newsvendor_s = NewsvendorFractile(state.mu, state.sigma, fractile, max_l);
+                state.backlog_floor = -static_cast<int64_t>(inventory_cap_multiplier * static_cast<double>(newsvendor_s));
+                state.inventory_ceiling = static_cast<int64_t>(inventory_cap_multiplier * static_cast<double>(newsvendor_s));
+            }
+            else
+            {
+                state.backlog_floor = std::numeric_limits<int64_t>::min();
+                state.inventory_ceiling = std::numeric_limits<int64_t>::max();
+            }
 
             auto queue = Queue<int64_t>{};
             queue.reserve(max_lr);

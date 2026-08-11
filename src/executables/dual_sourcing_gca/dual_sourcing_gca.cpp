@@ -37,9 +37,21 @@ int main(int argc, char *argv[])
     int64_t num_gens;
     dcl_config.Get("num_gens", num_gens);
 
-    // Initial CDI policy
-    auto initial_policy = mdp->GetPolicy("random");
-    system << "Initial policy: CDI" << std::endl;
+    // Initial policy for generation-1 rollout (matches DCL's own policy_0 concept).
+    // Defaults to random if the dcl_config does not specify one.
+    DynaPlex::Policy initial_policy;
+    if (dcl_config.HasKey("initial_policy"))
+    {
+        VarGroup initial_policy_config;
+        dcl_config.Get("initial_policy", initial_policy_config);
+        initial_policy = mdp->GetPolicy(initial_policy_config);
+        system << "Initial policy: " << initial_policy_config.Identifier() << std::endl;
+    }
+    else
+    {
+        initial_policy = mdp->GetPolicy("random");
+        system << "Initial policy: random" << std::endl;
+    }
 
     // output path
     std::string action_repr;

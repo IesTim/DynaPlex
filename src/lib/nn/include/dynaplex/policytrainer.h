@@ -9,7 +9,9 @@ namespace DynaPlex::NN
 	public:
 		PolicyTrainer(const DynaPlex::System&, DynaPlex::MDP, const DynaPlex::VarGroup& training_config, int64_t rng_seed);
 		PolicyTrainer() = default;
-		void TrainPolicy(DynaPlex::VarGroup nn_architecture, int64_t generation, std::string path_to_sample_data, bool silent=false);
+		// Returns the argmax agreement rate (masked vs unmasked argmax on the validation set)
+		// of the saved policy - see samplegenerator.h for why this matters.
+		double TrainPolicy(DynaPlex::VarGroup nn_architecture, int64_t generation, std::string path_to_sample_data, bool silent=false);
 		DynaPlex::Policy LoadPolicy(DynaPlex::VarGroup nn_architecture, int64_t generation);
 
 	private:
@@ -20,5 +22,7 @@ namespace DynaPlex::NN
 		int64_t early_stopping_patience;
 		int64_t max_training_epochs;
 		bool train_based_on_probs;
+		double weight_decay;
+		double smoothness_weight;
 	};
 }//DynaPlex::NN

@@ -1,0 +1,42 @@
+{
+    "train_l_max": 5,
+    "max_order_size": 270,
+    "simulation": {
+        "warmup_periods": 100,
+        "periods_per_trajectory": 5000,
+        "number_of_trajectories": 1000
+    },
+    "gca_sequential": "sequential_mdp_config_sequential_dcl_config_small_20260803_164735",
+    "gca_flat_joint": "flat_joint_mdp_config_flat_joint_dcl_config_small_20260806_140028",
+    "gca_sequential_K3": "INVULLEN",
+    "gca_flat_joint_K3": "INVULLEN",
+    "convergence": {
+        "run_info_path": "dual_sourcing/runs/flat_joint_mdp_config_flat_joint_dcl_config_small_20260806_140028/run_info.json"
+    },
+    "horizon": {
+        "instance": {
+            "name": "instance_1",
+            "l_e": 1, "l_r": 4,
+            "mu": 4.0, "sigma": 2.0,
+            "h": 1.0, "b": 49.0,
+            "c_r": 1.0, "c_e": 4.0
+        },
+        "train_min_mu": 2.0,
+        "train_max_mu": 12.0,
+        "number_of_trajectories": 100,
+        "periods_per_trajectory": 2000,
+        "action_representation": "sequential",
+        "gca_policy": "INVULLEN",
+        "tuning": {
+            "warmup_periods": 100,
+            "periods_per_trajectory": 1000,
+            "number_of_trajectories": 100
+        }
+    },
+    "analyze": {
+        "instance_name": "instance_1",
+        "num_periods": 100000,
+        "gca_policy": "INVULLEN",
+        "action_representation": "sequential"
+    }
+}

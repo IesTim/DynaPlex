@@ -1,0 +1,12 @@
+{
+  "id": "lost_sales",
+  "p": 4.0,
+  "h": 1.0,
+  "leadtime": 3,
+  "discount_factor": 1.0,
+  "demand_dist": {
+    "type": "adan_eenige_resing",
+    "mean": 4.0,
+    "stdev": 1
+  }
+}

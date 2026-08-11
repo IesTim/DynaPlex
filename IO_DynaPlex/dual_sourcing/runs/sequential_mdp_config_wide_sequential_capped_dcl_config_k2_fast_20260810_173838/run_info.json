@@ -1,0 +1,8 @@
+{
+    "action_representation": "sequential",
+    "dcl_config": "dcl_config_k2_fast.json",
+    "mdp_config": "mdp_config_wide_sequential_capped.json",
+    "mdp_identifier": "dual_sourcing_backlog_8jaX0FWwSoYily-OJkKeI6xJqd-4BUoF4=uPvWat3EE__",
+    "num_gens": 3,
+    "timestamp": "20260810_173838"
+}

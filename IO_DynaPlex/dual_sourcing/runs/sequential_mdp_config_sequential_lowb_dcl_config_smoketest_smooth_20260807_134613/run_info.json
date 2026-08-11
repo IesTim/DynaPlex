@@ -1,0 +1,8 @@
+{
+    "action_representation": "sequential",
+    "dcl_config": "dcl_config_smoketest_smooth.json",
+    "mdp_config": "mdp_config_sequential_lowb.json",
+    "mdp_identifier": "dual_sourcing_backlog_Y7f6pe2iXkbxsVWaY3ay4koOZmRdo2JBMHdog4csz7I__",
+    "num_gens": 3,
+    "timestamp": "20260807_134613"
+}

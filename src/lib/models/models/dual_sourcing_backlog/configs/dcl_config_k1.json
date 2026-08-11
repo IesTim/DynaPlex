@@ -1,0 +1,28 @@
+{
+    "N": 2000,
+    "num_gens": 5,
+    "H": 20,
+    "M": 300,
+    "L": 100,
+    "SimulateOnlyPromisingActions": true,
+    "Num_Promising_Actions": 12,
+    "retrain_lastgen_only": false,
+    "warmup_policy": {
+        "id": "base_stock",
+        "S": 17
+    },
+    "fallback_policy": {
+        "id": "base_stock",
+        "S": 17
+    },
+    "argmax_agreement_threshold": 0.2,
+    "nn_architecture": {
+        "type": "mlp",
+        "hidden_layers": [64, 64]
+    },
+    "nn_training": {
+        "early_stopping_patience": 15,
+        "mini_batch_size": 1024,
+        "max_training_epochs": 1000
+    }
+}

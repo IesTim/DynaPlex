@@ -45,6 +45,16 @@ namespace DynaPlex::Algorithms {
 			nn_architecture.Add("hidden_layers", DynaPlex::VarGroup::Int64Vec{});
 		}
 
+		config.GetOrDefault("argmax_agreement_threshold", argmax_agreement_threshold, -1.0);
+		fallback_policy = nullptr;
+		if (config.HasKey("fallback_policy"))
+		{
+			VarGroup fallback_policy_config;
+			config.Get("fallback_policy", fallback_policy_config);
+			fallback_policy = mdp->GetPolicy(fallback_policy_config);
+		}
+		generation_is_trustworthy.assign(num_gens + 1, true);
+
 	}
 
 
@@ -58,14 +68,22 @@ namespace DynaPlex::Algorithms {
 		else
 		{
 			for (int64_t generation = resume_gen; generation < num_gens; generation++) {
-				DynaPlex::Policy policy = GetPolicy(generation);
+				DynaPlex::Policy policy = GetPolicyForSampling(generation);
 
 				sampleCollector.GenerateStateSamples(policy, GetPathOfSampleFile(generation));
 				if(!silent)
 					system << "Elapsed time: " << system.Elapsed() << std::endl;
 				if (system.WorldRank() == 0) {
-					trainer.TrainPolicy(nn_architecture, generation + 1, GetPathOfSampleFile(generation), silent);
+					double argmax_agreement = trainer.TrainPolicy(nn_architecture, generation + 1, GetPathOfSampleFile(generation), silent);
 					//system.remove_file(GetPathOfSampleFile(generation));
+					if (fallback_policy && argmax_agreement_threshold >= 0.0 && argmax_agreement < argmax_agreement_threshold)
+					{
+						generation_is_trustworthy[generation + 1] = false;
+						if (!silent)
+							system << "  [fallback] generation " << (generation + 1) << " argmax agreement "
+								<< argmax_agreement << " below threshold " << argmax_agreement_threshold
+								<< " - using fallback_policy to drive sampling instead of this checkpoint." << std::endl;
+					}
 				}
 				system.AddBarrier();
 			}
@@ -92,6 +110,23 @@ namespace DynaPlex::Algorithms {
 
 		if (generation == 0)
 			return policy_0;
+
+		// Always the genuinely-trained network, regardless of fallback status: this is the
+		// artifact callers save/evaluate as "the policy", and it must never be silently
+		// swapped for fallback_policy (a heuristic) even if that generation's checkpoint was
+		// deemed untrustworthy for driving further sampling - see GetPolicyForSampling.
+		return trainer.LoadPolicy(nn_architecture, generation);
+	}
+
+	DynaPlex::Policy DCL::GetPolicyForSampling(int64_t generation)
+	{
+		if (generation == 0)
+			return policy_0;
+
+		// Only substitutes fallback_policy to protect the data that *subsequent* generations
+		// train on; the trained network itself (see GetPolicy) is never replaced.
+		if (fallback_policy && !generation_is_trustworthy[generation])
+			return fallback_policy;
 
 		return trainer.LoadPolicy(nn_architecture, generation);
 	}

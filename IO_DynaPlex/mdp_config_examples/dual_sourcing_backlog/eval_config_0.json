@@ -1,0 +1,11 @@
+{
+    "train_l_max": 4,
+    "simulation": {
+        "warmup_periods": 100,
+        "periods_per_trajectory": 5000,
+        "number_of_trajectories": 1000
+    },
+    "gca_flat_joint": "GCA-DS_flat_joint_mdp_config_0_dcl_config_0",
+    "gca_sequential": "GCA-DS_sequential_mdp_config_0_dcl_config_0",
+    "gca_multi_discrete": "GCA-DS_multi_discrete_mdp_config_0_dcl_config_0"
+}

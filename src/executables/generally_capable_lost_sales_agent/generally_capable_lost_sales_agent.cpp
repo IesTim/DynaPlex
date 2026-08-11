@@ -1390,7 +1390,7 @@ void TestOutlierInstances(DynaPlex::VarGroup mdp_config, std::string gca_loc) {
 	PrintResults(allResults, 0, 0);
 }
 
-void TrainNetwork() {
+void TrainNetwork(int64_t N_override = 0) {
 
 	auto& dp = DynaPlexProvider::Get();
 
@@ -1407,8 +1407,8 @@ void TrainNetwork() {
 
 	int64_t num_gens = 5;
 	DynaPlex::VarGroup dcl_config{
-		//use paper hyperparameters everywhere. 
-		{"N",5000000},
+		//use paper hyperparameters everywhere.
+		{"N", N_override > 0 ? N_override : int64_t(5000000)},
 		{"num_gens",num_gens},
 		{"SimulateOnlyPromisingActions", true},
 		{"Num_Promising_Actions", 16},
@@ -1428,9 +1428,10 @@ void TrainNetwork() {
 	config.Add("max_p", 100.0);
 	config.Add("max_leadtime", 10);
 	config.Add("max_num_cycles", 7);
-	auto path = dp.System().filepath("Zero_Shot_Lost_Sales_Inventory_Control", "GC-LSN");
+	std::string path_name = N_override > 0 ? ("GC-LSN_N" + std::to_string(N_override)) : "GC-LSN";
+	auto path = dp.System().filepath("Zero_Shot_Lost_Sales_Inventory_Control", path_name);
 
-	bool train = false;
+	bool train = N_override > 0;
 	bool train_seperate_networks = false;
 	bool test_seperate_networks = false;
 	bool test_outlier_instances = false;
@@ -1618,9 +1619,122 @@ void DemonstrateActions() // contact authors for these experiments
 	}
 }
 
-int main() {
+void QuickCompareGCLSN(const std::string& path_name)
+{
+	auto& dp = DynaPlexProvider::Get();
 
-	TrainNetwork();
+	VarGroup mdp_config;
+	mdp_config.Add("id", std::string("Zero_Shot_Lost_Sales_Inventory_Control"));
+	mdp_config.Add("evaluate", true);
+	mdp_config.Add("train_stochastic_leadtimes", true);
+	mdp_config.Add("train_cyclic_demand", true);
+	mdp_config.Add("train_random_yield", false);
+	mdp_config.Add("stochastic_leadtime", false);
+	mdp_config.Add("leadtime", int64_t(1));
+	mdp_config.Add("discount_factor", 1.0);
+	mdp_config.Add("max_demand", 12.0);
+	mdp_config.Add("max_p", 100.0);
+	mdp_config.Add("max_leadtime", 10);
+	mdp_config.Add("max_num_cycles", 7);
+	std::vector<int64_t> demand_cycles = { 0 };
+	mdp_config.Add("demand_cycles", demand_cycles);
+	std::vector<double> mean_demand = { 10.0 };
+	mdp_config.Add("mean_demand", mean_demand);
+	std::vector<double> stdDemand = { std::sqrt(10.0) }; // poisson
+	mdp_config.Add("stdDemand", stdDemand);
+	mdp_config.Add("p", 5.0);
+	mdp_config.Add("censoredDemand", false);
+	mdp_config.Add("maximizeRewards", false);
+
+	DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
+
+	// Fast (reduced-trajectory) BSP search, for a quick but real benchmark comparison -
+	// not the paper's full 1000-trajectory search, just enough for a sanity-checking gap.
+	VarGroup search_config;
+	search_config.Add("warmup_periods", int64_t(100));
+	search_config.Add("number_of_trajectories", int64_t(100));
+	search_config.Add("periods_per_trajectory", int64_t(1000));
+	search_config.Add("rng_seed", int64_t(1122));
+	auto search_comparer = dp.GetPolicyComparer(mdp, search_config);
+
+	double best_bs_cost = std::numeric_limits<double>::infinity();
+	int64_t best_bs_level = 1;
+	VarGroup bs_policy_config;
+	bs_policy_config.Add("id", std::string("base_stock"));
+	bs_policy_config.Add("base_stock_level", int64_t(1));
+	for (int64_t level = 1; level <= 200; level++)
+	{
+		bs_policy_config.Set("base_stock_level", level);
+		auto policy = mdp->GetPolicy(bs_policy_config);
+		auto result = search_comparer.Assess(policy);
+		double cost;
+		result.Get("mean", cost);
+		if (cost < best_bs_cost) { best_bs_cost = cost; best_bs_level = level; }
+		else break;
+	}
+
+	// Final comparison with more trajectories for a cleaner number.
+	VarGroup eval_config;
+	eval_config.Add("warmup_periods", int64_t(100));
+	eval_config.Add("number_of_trajectories", int64_t(300));
+	eval_config.Add("periods_per_trajectory", int64_t(5000));
+	eval_config.Add("rng_seed", int64_t(1122));
+	auto eval_comparer = dp.GetPolicyComparer(mdp, eval_config);
+
+	bs_policy_config.Set("base_stock_level", best_bs_level);
+	auto bs_policy = mdp->GetPolicy(bs_policy_config);
+	auto bs_result = eval_comparer.Assess(bs_policy);
+	double bs_cost;
+	bs_result.Get("mean", bs_cost);
+
+	auto gca_path = dp.System().filepath("Zero_Shot_Lost_Sales_Inventory_Control", path_name);
+	auto gca_policy = dp.LoadPolicy(mdp, gca_path);
+	auto gca_result = eval_comparer.Assess(gca_policy);
+	double gca_cost;
+	gca_result.Get("mean", gca_cost);
+
+	double gap = (gca_cost - bs_cost) / bs_cost * 100.0;
+	dp.System() << "instance: mean_demand=10, poisson, p=5, leadtime=1, uncensored" << std::endl;
+	dp.System() << "BSP (level=" << best_bs_level << ") cost: " << bs_cost << std::endl;
+	dp.System() << "GC-LSN (" << path_name << ") cost: " << gca_cost << std::endl;
+	dp.System() << "Gap vs BSP: " << gap << "%" << std::endl;
+}
+
+int main(int argc, char* argv[]) {
+
+	if (argc > 1 && std::string(argv[1]) == "quick_compare")
+	{
+		std::string path_name = argc > 2 ? std::string(argv[2]) : std::string("GC-LSN");
+		QuickCompareGCLSN(path_name);
+		return 0;
+	}
+
+	if (argc > 1 && std::string(argv[1]) == "check_action_space")
+	{
+		auto& dp = DynaPlexProvider::Get();
+		VarGroup config;
+		config.Add("id", "Zero_Shot_Lost_Sales_Inventory_Control");
+		config.Add("evaluate", false);
+		config.Add("train_stochastic_leadtimes", true);
+		config.Add("train_cyclic_demand", true);
+		config.Add("train_random_yield", false);
+		config.Add("discount_factor", 1.0);
+		config.Add("max_demand", 12.0);
+		config.Add("max_p", 100.0);
+		config.Add("max_leadtime", 10);
+		config.Add("max_num_cycles", 7);
+		DynaPlex::MDP mdp = dp.GetMDP(config);
+		auto info = mdp->GetStaticInfo();
+		dp.System() << info.Dump() << std::endl;
+		return 0;
+	}
+
+	int64_t N_override = 0;
+	if (argc > 1 && std::string(argv[1]) == "train_n")
+	{
+		if (argc > 2) N_override = std::stoll(argv[2]);
+	}
+	TrainNetwork(N_override);
 
 	return 0;
 }

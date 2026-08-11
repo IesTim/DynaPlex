@@ -19,8 +19,12 @@ namespace DynaPlex::Algorithms {
 		std::vector<DynaPlex::Policy> GetPolicies();	
 	
 	private:
-		std::string GetPathOfSampleFile(int64_t generation);	
-	
+		std::string GetPathOfSampleFile(int64_t generation);
+
+		// Like GetPolicy, but may substitute fallback_policy for a generation deemed
+		// untrustworthy - used only to select what drives sampling for the *next*
+		// generation. GetPolicy() (the artifact callers save/evaluate) never substitutes.
+		DynaPlex::Policy GetPolicyForSampling(int64_t generation);
 
 		int64_t num_gens,resume_gen, rng_seed;
 		bool retrain_lastgen_only, silent;
@@ -30,6 +34,15 @@ namespace DynaPlex::Algorithms {
 		DynaPlex::Policy policy_0;
 		DynaPlex::System system;
 		DynaPlex::DCL::SampleGenerator sampleCollector;
+
+		// If a generation's saved policy has argmax agreement (masked vs unmasked argmax,
+		// see samplegenerator.h/policytrainer.cpp) below this threshold, it is considered
+		// untrustworthy for driving sampling: GetPolicyForSampling() substitutes
+		// fallback_policy for that generation instead, so a single bad generation can't
+		// corrupt the data the next generation trains on. Disabled (no gating) when < 0.
+		double argmax_agreement_threshold = -1.0;
+		DynaPlex::Policy fallback_policy = nullptr;
+		std::vector<bool> generation_is_trustworthy;
 
 	};
 }

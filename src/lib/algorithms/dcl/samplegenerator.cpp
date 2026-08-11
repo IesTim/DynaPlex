@@ -50,6 +50,15 @@ namespace DynaPlex::DCL {
 			L = 0;
 			reinitiate_counter = 0;
 		}
+
+		warmup_policy = nullptr;
+		if (config.HasKey("warmup_policy"))
+		{
+			VarGroup warmup_policy_config;
+			config.Get("warmup_policy", warmup_policy_config);
+			warmup_policy = mdp->GetPolicy(warmup_policy_config);
+		}
+
 		seed_offset = 0;
 	}
 
@@ -75,7 +84,7 @@ namespace DynaPlex::DCL {
 				{
 					if (mdp->IncorporateUntilAction({ &trajectory,1 }, WarmUpSteps))
 					{
-						mdp->IncorporateAction({ &trajectory,1 }, policy);
+						mdp->IncorporateAction({ &trajectory,1 }, warmup_policy ? warmup_policy : policy);
 
 
 						if (actual_steps++ > 10000 * WarmUpSteps)
