@@ -49,6 +49,11 @@ namespace DynaPlex::Utilities {
 	private:
 		int64_t number_of_trajectories, periods_per_trajectory, warmup_periods, max_periods_until_error, rng_seed, number_of_statistics;
 		bool avoidable_cost, print_standard_error;
+		// If true, Assess()/Compare() include each trajectory's raw return under
+		// "per_trajectory_returns" in the output VarGroup, not just the aggregate mean/st_error -
+		// needed so downstream analysis (e.g. Wilcoxon tests) can recompute statistics from the
+		// individual observations rather than only ever seeing an already-aggregated mean.
+		bool return_raw_trajectories;
 		DynaPlex::MDP mdp;
 		System system;
 

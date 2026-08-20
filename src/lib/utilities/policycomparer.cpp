@@ -106,6 +106,7 @@ namespace DynaPlex::Utilities {
 		config.GetOrDefault("number_of_statistics", number_of_statistics, 0);
 		config.GetOrDefault("avoidable_cost", avoidable_cost, false);
 		config.GetOrDefault("print_standard_error", print_standard_error, false);
+		config.GetOrDefault("return_raw_trajectories", return_raw_trajectories, false);
 		if (rng_seed < 0)
 			throw DynaPlex::Error("PolicyComparer :: Invalid rng_seed - should be non-negative");
 	}
@@ -243,6 +244,8 @@ namespace DynaPlex::Utilities {
 			forPolicy.Add("mean", comparison.mean(i));
 			if (number_of_trajectories > 1 && print_standard_error)
 				forPolicy.Add("st_error", comparison.standardError(i));
+			if (return_raw_trajectories)
+				forPolicy.Add("per_trajectory_returns", ReturnValues[i]);
 			if (index_of_benchmark > minusone && i != index_of_benchmark)
 			{
 				forPolicy.Add("mean_difference", comparison.mean(i, index_of_benchmark));
