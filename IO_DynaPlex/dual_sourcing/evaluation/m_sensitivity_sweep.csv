@@ -1,0 +1,25 @@
+sweep_key,sweep_value,seed,instance_idx,gap_vs_cdi_pct,train_elapsed_sec,run_dir,timestamp
+rollout_M,500,1,0,2.94639,2178.2,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260811_234402,2026-08-12 00:22:10
+rollout_M,500,1,1,4.2586,2178.2,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260811_234402,2026-08-12 00:24:01
+rollout_M,500,2,0,3.2639,1106.6,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_002402,2026-08-12 00:44:03
+rollout_M,500,2,1,6.99834,1106.6,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_002402,2026-08-12 00:45:40
+rollout_M,500,3,0,9.10859,1073.8,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_004541,2026-08-12 01:05:12
+rollout_M,500,3,1,10.1681,1073.8,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_004541,2026-08-12 01:06:49
+rollout_M,250,1,0,7.53793,567.4,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_010649,2026-08-12 01:17:51
+rollout_M,250,1,1,22.1807,567.4,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_010649,2026-08-12 01:19:28
+rollout_M,250,2,0,4.49441,556.4,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_011929,2026-08-12 01:30:20
+rollout_M,250,2,1,8.79946,556.4,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_011929,2026-08-12 01:31:55
+rollout_M,250,3,0,9.72128,561.2,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_013155,2026-08-12 01:42:51
+rollout_M,250,3,1,11.5158,561.2,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_013155,2026-08-12 01:44:27
+rollout_M,100,1,0,1.87735,260.7,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_014427,2026-08-12 01:50:22
+rollout_M,100,1,1,1.09084,260.7,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_014427,2026-08-12 01:51:58
+rollout_M,100,2,0,4.97262,257.5,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_015158,2026-08-12 01:57:51
+rollout_M,100,2,1,8.98808,257.5,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_015158,2026-08-12 01:59:26
+rollout_M,100,3,0,9.08838,258.2,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_015926,2026-08-12 02:05:21
+rollout_M,100,3,1,8.25453,258.2,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_015926,2026-08-12 02:06:56
+rollout_M,50,1,0,6.89469,160.8,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_020657,2026-08-12 02:11:10
+rollout_M,50,1,1,15.0526,160.8,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_020657,2026-08-12 02:12:47
+rollout_M,50,2,0,5.94749,156.5,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_021247,2026-08-12 02:16:58
+rollout_M,50,2,1,10.4885,156.5,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_021247,2026-08-12 02:18:35
+rollout_M,50,3,0,6.2893,160.3,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_021835,2026-08-12 02:22:48
+rollout_M,50,3,1,10.6379,160.3,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_021835,2026-08-12 02:24:22

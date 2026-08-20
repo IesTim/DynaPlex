@@ -1,0 +1,20 @@
+{
+    "description": "10 held-out validation instances within the small K=2 range (mu in [4,8], b in [5,15], c_r in [0.1,0.5] with c_e=1.0, l_min=1/l_max=3, h in [0.7,1.3]), with tuned CDI baselines. Used for live per-generation evaluation during training.",
+    "struct_l_min": 1,
+    "struct_l_max": 3,
+    "inventory_cap_multiplier": 3.0,
+    "max_order_size": 60,
+    "c_e": 1.0,
+    "instances": [
+        {"idx": 0, "mu": 4.0, "sigma": 2.0, "h": 0.7, "b": 5.0, "l_e": 1, "l_r": 2, "c_r": 0.1, "S_e": 5, "S_r": 11},
+        {"idx": 1, "mu": 8.0, "sigma": 4.0, "h": 1.3, "b": 15.0, "l_e": 1, "l_r": 3, "c_r": 0.5, "S_e": 14, "S_r": 29},
+        {"idx": 2, "mu": 6.0, "sigma": 3.0, "h": 1.0, "b": 10.0, "l_e": 1, "l_r": 2, "c_r": 0.3, "S_e": 10, "S_r": 17},
+        {"idx": 3, "mu": 6.56, "sigma": 3.28, "h": 0.834, "b": 5.25, "l_e": 1, "l_r": 2, "c_r": 0.21, "S_e": 8, "S_r": 17},
+        {"idx": 4, "mu": 6.71, "sigma": 3.355, "h": 0.953, "b": 13.92, "l_e": 1, "l_r": 2, "c_r": 0.135, "S_e": 13, "S_r": 22},
+        {"idx": 5, "mu": 4.37, "sigma": 2.185, "h": 1.037, "b": 7.33, "l_e": 1, "l_r": 3, "c_r": 0.341, "S_e": 6, "S_r": 14},
+        {"idx": 6, "mu": 4.88, "sigma": 2.44, "h": 0.704, "b": 10.89, "l_e": 1, "l_r": 2, "c_r": 0.424, "S_e": 10, "S_r": 16},
+        {"idx": 7, "mu": 6.79, "sigma": 3.395, "h": 1.274, "b": 8.4, "l_e": 1, "l_r": 3, "c_r": 0.162, "S_e": 9, "S_r": 22},
+        {"idx": 8, "mu": 4.41, "sigma": 2.205, "h": 0.906, "b": 8.8, "l_e": 1, "l_r": 3, "c_r": 0.244, "S_e": 7, "S_r": 16},
+        {"idx": 9, "mu": 7.23, "sigma": 3.615, "h": 1.284, "b": 12.3, "l_e": 1, "l_r": 3, "c_r": 0.314, "S_e": 11, "S_r": 25}
+    ]
+}

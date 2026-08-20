@@ -1,0 +1,19 @@
+{
+    "description": "10 held-out validation instances within the wide (Temizoz-scale) K=2 range with the backlog cost b range adjusted to match the other cost parameters (mu in [2,12], b in [0,4] instead of [4,99], c_e/c_r both in [0.1,4], l_min=1/l_max=5, h=1.0 fixed), with tuned CDI baselines. Used for live per-generation evaluation during training.",
+    "struct_l_min": 1,
+    "struct_l_max": 5,
+    "inventory_cap_multiplier": 3.0,
+    "max_order_size": 270,
+    "instances": [
+        {"idx": 0, "mu": 2.0, "sigma": 1.0, "h": 1.0, "b": 0.1, "l_e": 1, "l_r": 2, "c_e": 0.5, "c_r": 0.1, "S_e": 1, "S_r": 3},
+        {"idx": 1, "mu": 12.0, "sigma": 6.0, "h": 1.0, "b": 4.0, "l_e": 4, "l_r": 5, "c_e": 4.0, "c_r": 3.5, "S_e": 1, "S_r": 72},
+        {"idx": 2, "mu": 7.0, "sigma": 3.5, "h": 1.0, "b": 2.0, "l_e": 2, "l_r": 3, "c_e": 2.0, "c_r": 1.0, "S_e": 1, "S_r": 22},
+        {"idx": 3, "mu": 2.52, "sigma": 1.26, "h": 1.0, "b": 0.44, "l_e": 1, "l_r": 2, "c_e": 1.69, "c_r": 0.27, "S_e": 1, "S_r": 4},
+        {"idx": 4, "mu": 5.79, "sigma": 2.895, "h": 1.0, "b": 2.29, "l_e": 1, "l_r": 4, "c_e": 1.43, "c_r": 0.17, "S_e": 5, "S_r": 21},
+        {"idx": 5, "mu": 5.37, "sigma": 2.685, "h": 1.0, "b": 1.4, "l_e": 2, "l_r": 5, "c_e": 1.06, "c_r": 0.1, "S_e": 2, "S_r": 26},
+        {"idx": 6, "mu": 9.74, "sigma": 4.87, "h": 1.0, "b": 3.53, "l_e": 3, "l_r": 4, "c_e": 1.57, "c_r": 0.11, "S_e": 1, "S_r": 47},
+        {"idx": 7, "mu": 3.02, "sigma": 1.51, "h": 1.0, "b": 0.27, "l_e": 1, "l_r": 2, "c_e": 2.7, "c_r": 0.43, "S_e": 1, "S_r": 5},
+        {"idx": 8, "mu": 4.92, "sigma": 2.46, "h": 1.0, "b": 1.78, "l_e": 1, "l_r": 2, "c_e": 1.96, "c_r": 0.97, "S_e": 1, "S_r": 10},
+        {"idx": 9, "mu": 9.69, "sigma": 4.845, "h": 1.0, "b": 1.44, "l_e": 4, "l_r": 5, "c_e": 3.23, "c_r": 0.75, "S_e": 1, "S_r": 53}
+    ]
+}

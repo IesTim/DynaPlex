@@ -1,0 +1,19 @@
+sweep_key,sweep_value,seed,instance_idx,gap_vs_cdi_pct,train_elapsed_sec,run_dir,timestamp
+ablation_label,all_actions,1,0,1.87735,260.9,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_022502,2026-08-12 02:30:56
+ablation_label,all_actions,1,1,1.09084,260.9,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_022502,2026-08-12 02:32:32
+ablation_label,all_actions,2,0,4.97262,255.8,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_023232,2026-08-12 02:38:21
+ablation_label,all_actions,2,1,8.98808,255.8,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_023232,2026-08-12 02:39:55
+ablation_label,all_actions,3,0,9.08838,258.4,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_023955,2026-08-12 02:45:49
+ablation_label,all_actions,3,1,8.25453,258.4,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_023955,2026-08-12 02:47:24
+ablation_label,window_16,1,0,62.964,102.2,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_024724,2026-08-12 02:50:39
+ablation_label,window_16,1,1,123.641,102.2,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_024724,2026-08-12 02:52:18
+ablation_label,window_16,2,0,239.782,99.2,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_025218,2026-08-12 02:55:33
+ablation_label,window_16,2,1,176.97,99.2,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_025218,2026-08-12 02:57:11
+ablation_label,window_16,3,0,136.97,102.4,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_025712,2026-08-12 03:00:27
+ablation_label,window_16,3,1,71.1459,102.4,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_025712,2026-08-12 03:02:01
+ablation_label,window_32,1,0,10.4597,157.7,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_030201,2026-08-12 03:06:14
+ablation_label,window_32,1,1,23.309,157.7,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_030201,2026-08-12 03:07:51
+ablation_label,window_32,2,0,73.5805,154.4,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_030752,2026-08-12 03:12:28
+ablation_label,window_32,2,1,1291.19,154.4,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_030752,2026-08-12 03:14:02
+ablation_label,window_32,3,0,40.6942,156.3,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_031403,2026-08-12 03:18:13
+ablation_label,window_32,3,1,116.08,156.3,sequential__sweep_tmp_mdp_config__sweep_tmp_dcl_config_20260812_031403,2026-08-12 03:19:49
