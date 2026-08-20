@@ -1,4 +1,4 @@
-# Draft paper plan — 14 days to Sept 1
+# Draft paper plan — 13 days to Sept 1
 
 Living checklist. I'll update this file and re-send it as we go — check items off,
 tell me your blocked days, and I'll rebalance the schedule around them.
@@ -18,29 +18,30 @@ tell me your blocked days, and I'll rebalance the schedule around them.
 
 ## Day-by-day
 
-Fill in your 4 already-blocked days below and I'll move compute-heavy (unattended)
-background jobs onto those evenings.
+Work-blocked days: Thu Aug 22, Fri Aug 23 (confirmed). Next week's 2 blocked days
+not yet specified — placeholders below, tell me the real dates and I'll shift the
+unattended background jobs onto those evenings instead.
 
 | Day | Date | Focus | Notes |
 |---|---|---|---|
-| 1 | Aug 18 (today) | Clean up branch, commit, push | Drop dead config duplicate + stray dirs; split into logical commits; review via GitHub compare view |
-| 2 | Aug 19 | Kick off tightened statistical validation (n=100-150) as background jobs | Runs unattended — good day to also start Methods section writing |
-| 3 | Aug 20 | Methods section draft; check on background runs | |
-| 4 | Aug 21 | *(blocked? evening only)* Regenerate benchmark table (DI/SI/TBS/CDI/GCA-DS) | |
-| 5 | Aug 22 | *(blocked? evening only)* Convergence + robustness/OOD figures | Reuses existing per-generation CSVs, no new training |
-| 6 | Aug 23 | Results section draft — plug in final numbers/figures | |
-| 7 | Aug 24 | *(blocked? evening only)* Results section continued | |
-| 8 | Aug 25 | Buffer / catch-up day | Absorb anything that overran |
-| 9 | Aug 26 | Discussion + limitations section | |
-| 10 | Aug 27 | *(blocked? evening only)* Introduction / related work | |
-| 11 | Aug 28 | Full draft assembly, consistency pass on numbers/claims | |
-| 12 | Aug 29 | Read-through + tightening | |
-| 13 | Aug 30 | Buffer / final figure polish | |
-| 14 | Sep 1 | Final polish, submit | |
+| 1 | Aug 20 (today) | ✅ Branch cleanup + 4 logical commits done | Dropped dead build-artifact config duplicate + 2 stray dirs; pushed for review |
+| 2 | Aug 21 | Kick off tightened statistical validation (n=100-150) as background jobs; start Methods section | Runs unattended overnight |
+| 3 | Aug 22 (work — evening only) | Background jobs continue; evening: Methods section | |
+| 4 | Aug 23 (work — evening only) | Background jobs finish; evening: prep benchmark-table regen | |
+| 5 | Aug 24 | Regenerate benchmark table (DI/SI/TBS/CDI/GCA-DS) | Fix stale tuned_heuristic_params.json/eval_config wiring |
+| 6 | Aug 25 | Convergence + robustness/OOD figures | Reuses existing per-generation CSVs, no new training |
+| 7 | Aug 26 | Results section draft — plug in final numbers/figures | |
+| 8 | Aug 27 *(placeholder — TBD blocked day?)* | Discussion + limitations section | |
+| 9 | Aug 28 | Buffer / catch-up day | Absorb anything that overran |
+| 10 | Aug 29 *(placeholder — TBD blocked day?)* | Introduction / related work | |
+| 11 | Aug 30 | Full draft assembly, consistency pass on numbers/claims | |
+| 12 | Aug 31 | Read-through + tightening | |
+| 13 | Sep 1 | Final polish, submit | |
 
 ## Open questions for you
 
-- Which 4 specific days are already blocked? (I'll mark them evening-only above)
+- Which 2 specific days next week are already blocked? (placeholders above at
+  Aug 27 / Aug 29 — tell me the real dates and I'll rebalance)
 - Any appetite for one more confirmatory training run (different seed) on either
   range for extra robustness, or are the two existing validated runs enough to
   stand on for the draft?
