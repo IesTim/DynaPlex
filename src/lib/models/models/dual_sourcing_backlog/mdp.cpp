@@ -80,6 +80,8 @@ namespace DynaPlex::Models {
             if (config.HasKey("l_values"))
                 config.Get("l_values", l_values);
 
+            config.GetOrDefault("oracle_mu_init", oracle_mu_init, oracle_mu_init);
+
             config.GetOrDefault("rollout_H", rollout_H, rollout_H);
             config.GetOrDefault("rollout_M", rollout_M, rollout_M);
             config.GetOrDefault("rollout_L", rollout_L, rollout_L);
@@ -252,14 +254,21 @@ namespace DynaPlex::Models {
                 inventory = state.backlog_floor;
             state.total_inv -= event;
 
+            // In oracle mode mu_hat/sigma_hat are pinned to the instance's true mu/sigma (set in
+            // GetInitialState) and never overwritten by the running estimate below - this gives
+            // the "perfect demand-rate knowledge" upper-bound comparison point. n_obs/sum_demand
+            // are still tracked for logging/consistency but do not feed back into mu_hat/sigma_hat.
             state.n_obs++;
             state.sum_demand += static_cast<double>(event);
             state.sum_sq_demand += static_cast<double>(event * event);
-            state.mu_hat = state.sum_demand / state.n_obs;
+            if (!oracle_mu_init)
+            {
+                state.mu_hat = state.sum_demand / state.n_obs;
 
-            double mean_sq = state.sum_sq_demand / state.n_obs;
-            double var_hat = std::max(mean_sq - state.mu_hat * state.mu_hat, DiscreteDist::LeastVarianceRequiredForAERFit(state.mu_hat));
-            state.sigma_hat = std::sqrt(var_hat);
+                double mean_sq = state.sum_sq_demand / state.n_obs;
+                double var_hat = std::max(mean_sq - state.mu_hat * state.mu_hat, DiscreteDist::LeastVarianceRequiredForAERFit(state.mu_hat));
+                state.sigma_hat = std::sqrt(var_hat);
+            }
 
             double cost = state.h * static_cast<double>(std::max(static_cast<int64_t>(0), inventory)) + state.b * static_cast<double>(std::max(static_cast<int64_t>(0), -inventory));
 
@@ -449,8 +458,16 @@ namespace DynaPlex::Models {
 
             state.cat = StateCategory::AwaitAction();
 
-            state.mu_hat = (min_mu + max_mu) / 2;
-            state.sigma_hat = (min_mu + max_mu) / 2.0;
+            if (oracle_mu_init)
+            {
+                state.mu_hat = state.mu;
+                state.sigma_hat = state.sigma;
+            }
+            else
+            {
+                state.mu_hat = (min_mu + max_mu) / 2;
+                state.sigma_hat = (min_mu + max_mu) / 2.0;
+            }
             state.n_obs = 0;
             state.sum_demand = 0.0;
             state.sum_sq_demand = 0.0;  

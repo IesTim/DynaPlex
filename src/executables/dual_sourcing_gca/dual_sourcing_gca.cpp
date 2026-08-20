@@ -4,8 +4,50 @@
 #include <ctime>
 #include <iomanip>
 #include <sstream>
+#include <cstdio>
+#include <memory>
+#include <array>
 
 using namespace DynaPlex;
+
+namespace {
+    // Shells out to git so every run_info.json records the exact commit its policy was
+    // trained under - for reproducibility claims, "these numbers came from this checkpoint,
+    // trained under this commit" is the honest guarantee we can make (retraining itself isn't
+    // bit-exact reproducible across runs due to multi-threaded sample generation).
+    std::string GetGitCommitHash()
+    {
+#ifdef _WIN32
+        std::unique_ptr<FILE, decltype(&_pclose)> pipe(_popen("git rev-parse HEAD 2>NUL", "r"), _pclose);
+#else
+        std::unique_ptr<FILE, decltype(&pclose)> pipe(popen("git rev-parse HEAD 2>/dev/null", "r"), pclose);
+#endif
+        if (!pipe)
+            return "unknown";
+        std::array<char, 128> buffer{};
+        std::string result;
+        while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe.get()) != nullptr)
+            result += buffer.data();
+        while (!result.empty() && (result.back() == '\n' || result.back() == '\r'))
+            result.pop_back();
+        return result.empty() ? "unknown" : result;
+    }
+
+    // "clean" only if there are zero uncommitted changes to tracked files - a run trained
+    // against a dirty tree cannot be reproduced from the commit hash alone.
+    bool GitTreeIsClean()
+    {
+#ifdef _WIN32
+        std::unique_ptr<FILE, decltype(&_pclose)> pipe(_popen("git status --porcelain 2>NUL", "r"), _pclose);
+#else
+        std::unique_ptr<FILE, decltype(&pclose)> pipe(popen("git status --porcelain 2>/dev/null", "r"), pclose);
+#endif
+        if (!pipe)
+            return false;
+        std::array<char, 128> buffer{};
+        return fgets(buffer.data(), static_cast<int>(buffer.size()), pipe.get()) == nullptr;
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -79,8 +121,14 @@ int main(int argc, char *argv[])
     run_info.Add("timestamp", timestamp);
     run_info.Add("num_gens", num_gens);
     run_info.Add("mdp_identifier", mdp->Identifier());
+    run_info.Add("mdp_config_full", mdp_config);
+    run_info.Add("dcl_config_full", dcl_config);
+    run_info.Add("git_commit", GetGitCommitHash());
+    run_info.Add("git_tree_clean", GitTreeIsClean());
 
     run_info.SaveToFile(system.filepath("dual_sourcing", "runs", run_name, "run_info.json"), 4);
+    if (!GitTreeIsClean())
+        system << "WARNING: git tree is dirty - this run's exact code state is not fully captured by the commit hash alone." << std::endl;
 
     system << "Action representation: " << action_repr << std::endl;
     system << "Training for " << num_gens << " generations..." << std::endl;

@@ -105,6 +105,14 @@ namespace DynaPlex::Models {
             void RegisterPolicies(DynaPlex::Erasure::PolicyRegistry<MDP>&) const;
             std::string action_representation;  // "flat_joint", "sequential"
             bool use_estimation;
+
+            // If true, GetInitialState seeds mu_hat/sigma_hat with the instance's true mu/sigma
+            // instead of the range-midpoint prior, i.e. the policy starts with perfect demand-rate
+            // knowledge rather than having to learn it online from observations. Eval-time only
+            // switch - does not require retraining, since mu_hat/sigma_hat are already the only
+            // demand-rate features the network sees (see GetFeatures); this just changes what
+            // that estimate is initialized to. Used to measure the cost of online mu-estimation.
+            bool oracle_mu_init = false;
         };
     }
 }
