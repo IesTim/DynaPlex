@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <random>
 #include <cmath>
 #include "dynaplex/dynaplexprovider.h"
 #include "dynaplex/modelling/discretedist.h"
@@ -7,699 +8,333 @@
 
 using namespace DynaPlex;
 
-VarGroup BuildInstanceConfig(const VarGroup &instance, int64_t train_l_max, int64_t max_order_size, const std::string &action_representation)
-{
-    VarGroup config;
-    config.Add("id", std::string("dual_sourcing_backlog"));
-    config.Add("K", int64_t(2));
+namespace {
 
-    int64_t l_e, l_r;
-    instance.Get("l_e", l_e);
-    instance.Get("l_r", l_r);
-    config.Add("l_min", l_e);
-    config.Add("l_max", train_l_max);
-
-    double mu, sigma, h, b, c_r, c_e;
-    instance.Get("mu", mu);
-    instance.Get("sigma", sigma);
-    instance.Get("h", h);
-    instance.Get("b", b);
-    instance.Get("c_r", c_r);
-    instance.Get("c_e", c_e);
-
-    config.Add("min_h", h);
-    config.Add("max_h", h);
-    config.Add("min_b", b);
-    config.Add("max_b", b);
-    config.Add("min_c", c_r);
-    config.Add("max_c", c_e);
-    config.Add("min_mu", mu);
-    config.Add("max_mu", mu);
-    config.Add("action_representation", action_representation);
-    config.Add("discount_factor", 1.0);
-    config.Add("max_order_size", max_order_size);
-
-    VarGroup fixed_instance;
-    fixed_instance.Add("h", h);
-    fixed_instance.Add("b", b);
-    fixed_instance.Add("mu", mu);
-    fixed_instance.Add("sigma", sigma);
-    fixed_instance.Add("l_e", l_e);
-    fixed_instance.Add("l_r", l_r);
-    std::vector<double> costs = {c_e, c_r};
-    fixed_instance.Add("costs", costs);
-    config.Add("fixed_instance", fixed_instance);
-
-    return config;
-}
-
-VarGroup BuildPureInstanceConfig(const VarGroup& instance,
-    const std::string& action_representation = "sequential")
-{
-    VarGroup config;
-    config.Add("id", std::string("dual_sourcing_backlog"));
-    config.Add("K", int64_t(2));
-
-    int64_t l_e, l_r;
-    instance.Get("l_e", l_e);
-    instance.Get("l_r", l_r);
-    config.Add("l_min", l_e);
-    config.Add("l_max", l_r);
-
-    double mu, sigma, h, b, c_r, c_e;
-    instance.Get("mu", mu);
-    instance.Get("sigma", sigma);
-    instance.Get("h", h);
-    instance.Get("b", b);
-    instance.Get("c_r", c_r);
-    instance.Get("c_e", c_e);
-
-    config.Add("min_h", h);   config.Add("max_h", h);
-    config.Add("min_b", b);   config.Add("max_b", b);
-    config.Add("min_c", c_r); config.Add("max_c", c_e);
-    config.Add("min_mu", mu); config.Add("max_mu", mu);
-    config.Add("action_representation", action_representation);
-    config.Add("discount_factor", 1.0);
-
-    return config;
-}
-
-double ComputeGap(double policy_cost, double cdi_cost)
-{
-    return (policy_cost - cdi_cost) / cdi_cost * 100.0;
-}
-
-bool EvaluateGCA(DynaPlex::MDP &mdp, const std::string &weights_path, const VarGroup &sim_config, double &cost_out)
-{
-    auto &dp = DynaPlexProvider::Get();
-    auto &system = dp.System();
-    try
+    // Builds an mdp_config for a single fixed instance. action_representation, oracle_mu_init,
+    // and rollout_M are all overridable per policy-spec entry so the same instance can be
+    // evaluated fairly under "sequential", "flat_joint", with/without oracle mu, etc.
+    VarGroup BuildMdpConfig(const VarGroup& instance, int64_t train_l_max, int64_t max_order_size,
+        double inventory_cap_multiplier, const std::string& action_representation, bool oracle_mu_init)
     {
-        auto full_path = system.filepath("dual_sourcing", "runs", weights_path, "policy_final");
-        auto policy = dp.LoadPolicy(mdp, full_path);
-        cost_out = EvaluatePolicyTuning(mdp, policy, sim_config);
-        return true;
-    }
-    catch (const DynaPlex::Error &e)
-    {
-        system << "  Skipped " << weights_path << " (" << e.what() << ")" << std::endl;
-        return false;
-    }
-}
+        VarGroup config;
+        config.Add("id", std::string("dual_sourcing_backlog"));
+        config.Add("K", int64_t(2));
 
-void RunEval(const std::string &eval_config_name)
-{
-    auto &dp = DynaPlexProvider::Get();
-    auto &system = dp.System();
-
-    // Load eval config
-    VarGroup eval_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", eval_config_name));
-
-    VarGroup sim_config;
-    eval_config.Get("simulation", sim_config);
-
-    int64_t train_l_max;
-    eval_config.Get("train_l_max", train_l_max);
-
-    int64_t max_order_size;
-    eval_config.Get("max_order_size", max_order_size);
-
-    std::string path_flat, path_sequential;
-    eval_config.Get("gca_flat_joint", path_flat);
-    eval_config.Get("gca_sequential", path_sequential);
-
-    // Load instances
-    VarGroup instances_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", "instances_config.json"));
-    std::vector<VarGroup> instances;
-    instances_config.Get("instances", instances);
-
-    // Load tuned heuristic parameters
-    VarGroup tuned = VarGroup::LoadFromFile(system.filepath("dual_sourcing", "tuning", "tuned_heuristic_params.json"));
-    std::vector<VarGroup> tuned_policies;
-    tuned.Get("tuned_policies", tuned_policies);
-
-    system << "Starting eval mode on " << instances.size() << " instances..." << std::endl;
-
-    std::vector<VarGroup> results;
-
-    for (size_t i = 0; i < instances.size(); i++)
-    {
-        auto &instance = instances[i];
-        auto &tuned_policy = tuned_policies[i];
-
-        std::string name;
-        instance.Get("name", name);
-        system << "Evaluating instance: " << name << std::endl;
-
-        VarGroup mdp_config = BuildInstanceConfig(instance, train_l_max, max_order_size, "flat_joint");
-        DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
-
-        VarGroup instance_result;
-        instance_result.Add("name", name);
-
-        instance_result.Add("parameters", instance);
-
-        // Evaluate heuristics
-        double cdi_cost = 0.0;
-        {
-            VarGroup cdi_params;
-            tuned_policy.Get("CDI", cdi_params);
-            int64_t S_r, S_e;
-            cdi_params.Get("S_r", S_r);
-            cdi_params.Get("S_e", S_e);
-            VarGroup policy_config;
-            policy_config.Add("id", std::string("cdi"));
-            policy_config.Add("S_r", S_r);
-            policy_config.Add("S_e", S_e);
-            auto policy = mdp->GetPolicy(policy_config);
-            cdi_cost = EvaluatePolicyTuning(mdp, policy, sim_config);
-            VarGroup res;
-            res.Add("cost", cdi_cost);
-            res.Add("gap_vs_CDI_pct", 0.0);
-            res.Add("S_r", S_r);
-            res.Add("S_e", S_e);
-            instance_result.Add("CDI", res);
-            system << "  CDI cost: " << cdi_cost << std::endl;
-        }
-
-        {
-            VarGroup di_params;
-            tuned_policy.Get("DI", di_params);
-            int64_t S;
-            di_params.Get("S", S);
-            VarGroup policy_config;
-            policy_config.Add("id", std::string("di"));
-            policy_config.Add("S", S);
-            auto policy = mdp->GetPolicy(policy_config);
-            double cost = EvaluatePolicyTuning(mdp, policy, sim_config);
-            VarGroup res;
-            res.Add("cost", cost);
-            res.Add("gap_vs_CDI_pct", ComputeGap(cost, cdi_cost));
-            res.Add("S", S);
-            instance_result.Add("DI", res);
-            system << "  DI cost: " << cost << std::endl;
-        }
-
-        {
-            VarGroup si_params;
-            tuned_policy.Get("SI", si_params);
-            int64_t S;
-            si_params.Get("S", S);
-            VarGroup policy_config;
-            policy_config.Add("id", std::string("si"));
-            policy_config.Add("S", S);
-            auto policy = mdp->GetPolicy(policy_config);
-            double cost = EvaluatePolicyTuning(mdp, policy, sim_config);
-            VarGroup res;
-            res.Add("cost", cost);
-            res.Add("gap_vs_CDI_pct", ComputeGap(cost, cdi_cost));
-            res.Add("S", S);
-            instance_result.Add("SI", res);
-            system << "  SI cost: " << cost << std::endl;
-        }
-
-        {
-            VarGroup tbs_params;
-            tuned_policy.Get("TBS", tbs_params);
-            int64_t S_e, c;
-            tbs_params.Get("S_e", S_e);
-            tbs_params.Get("c", c);
-            VarGroup policy_config;
-            policy_config.Add("id", std::string("tbs"));
-            policy_config.Add("S_e", S_e);
-            policy_config.Add("c", c);
-            auto policy = mdp->GetPolicy(policy_config);
-            double cost = EvaluatePolicyTuning(mdp, policy, sim_config);
-            VarGroup res;
-            res.Add("cost", cost);
-            res.Add("gap_vs_CDI_pct", ComputeGap(cost, cdi_cost));
-            res.Add("S_e", S_e);
-            res.Add("c", c);
-            instance_result.Add("TBS", res);
-            system << "  TBS cost: " << cost << std::endl;
-        }
-
-        // Evaluate GCA-DS flat_joint
-        {
-            VarGroup mdp_flat = BuildInstanceConfig(instance, train_l_max, max_order_size, "flat_joint");
-            DynaPlex::MDP mdp_f = dp.GetMDP(mdp_flat);
-            double cost = 0.0;
-            if (EvaluateGCA(mdp_f, path_flat, sim_config, cost))
-            {
-                VarGroup res;
-                res.Add("cost", cost);
-                res.Add("gap_vs_CDI_pct", ComputeGap(cost, cdi_cost));
-                instance_result.Add("GCA_flat_joint", res);
-                system << "  GCA flat_joint cost: " << cost << std::endl;
-            }
-        }
-
-        // Evaluate GCA-DS sequential
-        {
-            VarGroup mdp_seq = BuildInstanceConfig(instance, train_l_max, max_order_size, "sequential");
-            DynaPlex::MDP mdp_s = dp.GetMDP(mdp_seq);
-            double cost = 0.0;
-            if (EvaluateGCA(mdp_s, path_sequential, sim_config, cost))
-            {
-                VarGroup res;
-                res.Add("cost", cost);
-                res.Add("gap_vs_CDI_pct", ComputeGap(cost, cdi_cost));
-                instance_result.Add("GCA_sequential", res);
-                system << "  GCA sequential cost: " << cost << std::endl;
-            }
-        }
-
-        results.push_back(instance_result);
-        system << "  Instance " << name << " done." << std::endl;
-    }
-
-    // Save results
-    VarGroup output;
-    output.Add("experiment", std::string("benchmark_comparison"));
-    output.Add("instances", results);
-
-    auto out_path = system.filepath("dual_sourcing", "evaluation", "benchmark_results.json");
-    output.SaveToFile(out_path, 4);
-    system << "Eval complete. Results saved." << std::endl;
-}
-
-// Parameter evaluation
-void RunParameterEvaluation(const std::string &eval_config_name)
-{
-    auto &dp = DynaPlexProvider::Get();
-    auto &system = dp.System();
-
-    // Load config
-    VarGroup eval_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", eval_config_name));
-
-    // Read parameter settings
-    std::string parameter;
-    double parameter_min, parameter_max, parameter_step;
-    double train_min, train_max;
-    eval_config.Get("parameter", parameter);
-    eval_config.Get("parameter_min", parameter_min);
-    eval_config.Get("parameter_max", parameter_max);
-    eval_config.Get("parameter_step", parameter_step);
-    eval_config.Get("train_min", train_min);
-    eval_config.Get("train_max", train_max);
-
-    VarGroup base_instance;
-    eval_config.Get("base_instance", base_instance);
-
-    int64_t train_l_max;
-    eval_config.Get("train_l_max", train_l_max);
-
-    int64_t max_order_size;
-    eval_config.Get("max_order_size", max_order_size);
-
-    VarGroup sim_config, tuning_config;
-    eval_config.Get("simulation", sim_config);
-    eval_config.Get("tuning", tuning_config);
-
-    std::string path_flat;
-    eval_config.Get("gca_flat_joint", path_flat);
-
-    system << "Starting parameter evaluation mode: " << parameter << " from " << parameter_min << " to " << parameter_max << " step " << parameter_step << std::endl;
-
-    std::vector<VarGroup> parameter_results;
-
-    // Generate parameter values
-    for (double val = parameter_min; val <= parameter_max + 1e-9; val += parameter_step)
-    {
-        system << "Evaluating " << parameter
-               << " = " << val << std::endl;
-
-        VarGroup instance = base_instance;
-        instance.Set(parameter, val);
-
-        // Update sigma if mu changes
-        if (parameter == "mu")
-        {
-            double base_mu, base_sigma;
-            base_instance.Get("mu", base_mu);
-            base_instance.Get("sigma", base_sigma);
-            double cv = base_sigma / base_mu;
-            instance.Set("sigma", val * cv);
-        }
-
-        VarGroup mdp_config = BuildInstanceConfig(instance, train_l_max, max_order_size, "flat_joint");
-        DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
+        int64_t l_e, l_r;
+        instance.Get("l_e", l_e);
+        instance.Get("l_r", l_r);
+        config.Add("l_min", l_e);
+        config.Add("l_max", train_l_max > 0 ? train_l_max : l_r);
 
         double mu, sigma, h, b, c_r, c_e;
-        int64_t l_e, l_r;
         instance.Get("mu", mu);
         instance.Get("sigma", sigma);
         instance.Get("h", h);
         instance.Get("b", b);
         instance.Get("c_r", c_r);
         instance.Get("c_e", c_e);
-        instance.Get("l_e", l_e);
-        instance.Get("l_r", l_r);
 
-        auto dist = DiscreteDist::GetAdanEenigeResingDist(mu, sigma);
-        auto demand_over_lr = DiscreteDist::GetZeroDist();
-        for (int64_t i = 0; i <= l_r; i++)
-            demand_over_lr = demand_over_lr.Add(dist);
-        int64_t max_val = demand_over_lr.Fractile(b / (b + h));
+        config.Add("min_h", h);   config.Add("max_h", h);
+        config.Add("min_b", b);   config.Add("max_b", b);
+        config.Add("min_c", c_r); config.Add("max_c", c_e);
+        config.Add("min_mu", mu); config.Add("max_mu", mu);
+        config.Add("action_representation", action_representation);
+        config.Add("discount_factor", 1.0);
+        config.Add("max_order_size", max_order_size);
+        config.Add("inventory_cap_multiplier", inventory_cap_multiplier);
+        config.Add("oracle_mu_init", oracle_mu_init);
 
-        // Tune CDI
-        VarGroup cdi_result = TuneCDI(mdp, tuning_config,
-                                      mu, sigma, b, h, l_r, l_e, max_val);
+        VarGroup fixed_instance;
+        fixed_instance.Add("h", h);
+        fixed_instance.Add("b", b);
+        fixed_instance.Add("mu", mu);
+        fixed_instance.Add("sigma", sigma);
+        fixed_instance.Add("l_e", l_e);
+        fixed_instance.Add("l_r", l_r);
+        std::vector<double> costs = { c_e, c_r };
+        fixed_instance.Add("costs", costs);
+        config.Add("fixed_instance", fixed_instance);
 
-        // Evaluate CDI
-        double cdi_cost = 0.0;
-        {
-            int64_t S_r, S_e;
-            cdi_result.Get("S_r", S_r);
-            cdi_result.Get("S_e", S_e);
-            VarGroup policy_config;
-            policy_config.Add("id", std::string("cdi"));
-            policy_config.Add("S_r", S_r);
-            policy_config.Add("S_e", S_e);
-            auto policy = mdp->GetPolicy(policy_config);
-            cdi_cost = EvaluatePolicyTuning(mdp, policy, sim_config);
-        }
-
-        // Evaluate GCA-DS
-        double gca_cost = 0.0;
-        bool gca_success = EvaluateGCA(mdp, path_flat, sim_config, gca_cost);
-
-        VarGroup point;
-        point.Add("value", val);
-        point.Add("in_distribution",
-                  val >= train_min && val <= train_max);
-        point.Add("CDI_cost", cdi_cost);
-        point.Add("CDI_S_r", int64_t(0));
-        point.Add("CDI_S_e", int64_t(0));
-        cdi_result.Get("S_r", point);
-        if (gca_success)
-        {
-            point.Add("GCA_flat_cost", gca_cost);
-            point.Add("gap_vs_CDI_pct", ComputeGap(gca_cost, cdi_cost));
-        }
-        parameter_results.push_back(point);
-
-        system << "  CDI: " << cdi_cost;
-        if (gca_success)
-            system << "  GCA: " << gca_cost
-                   << "  gap: " << ComputeGap(gca_cost, cdi_cost) << "%";
-        system << std::endl;
+        return config;
     }
 
-    // Save results
-    VarGroup output;
-    output.Add("experiment", std::string("robustness_parameters"));
-    output.Add("parameter", parameter);
-    output.Add("train_min", train_min);
-    output.Add("train_max", train_max);
-    output.Add("parameter_points", parameter_results);
-
-    auto out_path = system.filepath("dual_sourcing", "evaluation", "parameter_" + parameter + ".json");
-    output.SaveToFile(out_path, 4);
-    system << "Parameter evaluation complete. Results saved." << std::endl;
-}
-
-// Horizon evaluation
-// template <typename StateType>
-// double SimulatePeriod(DynaPlex::MDP &mdp, DynaPlex::Policy &policy, StateType &state, DynaPlex::RNG &rng)
-// {
-//     double cost = 0.0;
-
-//     while (mdp->GetStateCategory(state).IsAwaitAction())
-//     {
-//         int64_t action = policy->GetAction(state);
-//         cost += mdp->ModifyStateWithAction(state, action);
-//     }
-
-//     auto event = mdp->GetEvent(state, rng);
-//     cost += mdp->ModifyStateWithEvent(state, event);
-
-//     return cost;
-// }
-
-// void RunHorizon(const std::string &eval_config_name)
-// {
-//     auto &dp = DynaPlexProvider::Get();
-//     auto &system = dp.System();
-
-//     VarGroup horizon_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", eval_config_name));
-
-//     VarGroup instance;
-//     horizon_config.Get("instance", instance);
-
-//     int64_t train_l_max;
-//     horizon_config.Get("train_l_max", train_l_max);
-
-//     int64_t num_trajectories, periods_per_trajectory;
-//     horizon_config.Get("number_of_trajectories", num_trajectories);
-//     horizon_config.Get("periods_per_trajectory", periods_per_trajectory);
-
-//     VarGroup tuning_config;
-//     horizon_config.Get("tuning", tuning_config);
-
-//     std::string gca_policy_path;
-//     std::string action_repr;
-//     horizon_config.Get("gca_policy", gca_policy_path);
-//     horizon_config.Get("action_representation", action_repr);
-
-//     double mu, sigma, h, b, c_r, c_e;
-//     int64_t l_e, l_r;
-//     instance.Get("mu", mu);
-//     instance.Get("sigma", sigma);
-//     instance.Get("h", h);
-//     instance.Get("b", b);
-//     instance.Get("c_r", c_r);
-//     instance.Get("c_e", c_e);
-//     instance.Get("l_e", l_e);
-//     instance.Get("l_r", l_r);
-
-//     system << "Starting horizon mode..." << std::endl;
-//     system << "Action representation: " << action_repr << std::endl;
-//     system << "Trajectories: " << num_trajectories
-//            << " Periods: " << periods_per_trajectory << std::endl;
-
-//     VarGroup mdp_config = BuildInstanceConfig(instance, train_l_max, action_repr);
-//     DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
-
-//     auto dist_bound = DiscreteDist::GetAdanEenigeResingDist(mu, sigma);
-//     auto demand_bound = DiscreteDist::GetZeroDist();
-//     for (int64_t i = 0; i <= l_r; i++)
-//         demand_bound = demand_bound.Add(dist_bound);
-//     int64_t max_val = demand_bound.Fractile(b / (b + h));
-
-//     system << "Tuning clairvoyant CDI..." << std::endl;
-//     VarGroup cdi_result = TuneCDI(mdp, tuning_config, mu, sigma, b, h, l_r, l_e, max_val);
-
-//     int64_t S_r, S_e;
-//     cdi_result.Get("S_r", S_r);
-//     cdi_result.Get("S_e", S_e);
-
-//     VarGroup cdi_policy_config;
-//     cdi_policy_config.Add("id", std::string("cdi"));
-//     cdi_policy_config.Add("S_r", S_r);
-//     cdi_policy_config.Add("S_e", S_e);
-//     auto cdi_policy = mdp->GetPolicy(cdi_policy_config);
-
-//     auto full_path = system.filepath("dual_sourcing", "runs", gca_policy_path, "policy_final");
-//     auto gca_policy = dp.LoadPolicy(mdp, full_path);
-
-//     system << "Running simulation..." << std::endl;
-
-//     std::vector<double> gca_costs(periods_per_trajectory, 0.0);
-//     std::vector<double> cdi_costs(periods_per_trajectory, 0.0);
-
-//     // Simulation
-//     for (int64_t traj = 0; traj < num_trajectories; traj++)
-//     {
-//         DynaPlex::RNG rng_gca{true, traj};
-//         DynaPlex::RNG rng_cdi{true, traj};
-
-//         auto gca_state = mdp->GetInitialState();
-//         auto cdi_state = mdp->GetInitialState();
-
-//         for (int64_t t = 0; t < periods_per_trajectory; t++)
-//         {
-//             gca_costs[t] += SimulatePeriod(mdp, gca_policy, gca_state, rng_gca);
-//             cdi_costs[t] += SimulatePeriod(mdp, cdi_policy, cdi_state, rng_cdi);
-//         }
-//     }
-
-//     std::vector<VarGroup> periods_output;
-//     for (int64_t t = 0; t < periods_per_trajectory; t++)
-//     {
-//         double gca_avg = gca_costs[t] / num_trajectories;
-//         double cdi_avg = cdi_costs[t] / num_trajectories;
-
-//         VarGroup p;
-//         p.Add("period", t + 1);
-//         p.Add("GCA_cost", gca_avg);
-//         p.Add("CDI_cost", cdi_avg);
-//         p.Add("gap_pct", ComputeGap(gca_avg, cdi_avg));
-//         periods_output.push_back(p);
-//     }
-
-//     VarGroup output;
-//     output.Add("experiment", std::string("online_estimation"));
-//     output.Add("instance", instance);
-//     output.Add("action_representation", action_repr);
-//     output.Add("num_trajectories", num_trajectories);
-//     output.Add("CDI_params", cdi_result);
-//     output.Add("periods", periods_output);
-
-//     auto out_path = system.filepath("dual_sourcing", "evaluation", "horizon_results.json");
-//     output.SaveToFile(out_path, 4);
-//     system << "Horizon complete. Results saved." << std::endl;
-// }
-
-void RunConvergence(const std::string &eval_config_name)
-{
-    auto& dp = DynaPlexProvider::Get();
-    auto& system = dp.System();
-
-    VarGroup eval_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", eval_config_name));
-
-    VarGroup sim_config;
-    eval_config.Get("simulation", sim_config);
-
-    int64_t periods;
-    sim_config.Get("periods_per_trajectory", periods);
-
-    int64_t train_l_max;
-    eval_config.Get("train_l_max", train_l_max);
-
-    int64_t max_order_size;
-    eval_config.Get("max_order_size", max_order_size);
-
-    VarGroup conv_config;
-    eval_config.Get("convergence", conv_config);
-
-    std::string run_info_path;
-    conv_config.Get("run_info_path", run_info_path);
-
-    VarGroup run_info = VarGroup::LoadFromFile(system.filepath(run_info_path));
-
-    std::string mdp_identifier, action_repr;
-    run_info.Get("mdp_identifier", mdp_identifier);
-    run_info.Get("action_representation", action_repr);
-
-    VarGroup instances_config = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", "instances_config.json"));
-    std::vector<VarGroup> instances;
-    instances_config.Get("instances", instances);
-
-    VarGroup tuned = VarGroup::LoadFromFile(system.filepath("dual_sourcing", "tuning", "tuned_heuristic_params.json"));
-    std::vector<VarGroup> tuned_instances;
-    tuned.Get("tuned_policies", tuned_instances);
-
-    std::vector<VarGroup> generation_results;
-
-    int64_t gen = 1;
-
-    while (true)
+    // Same fractile/max_val bound used throughout this project's tuning scripts to cap CDI's
+    // regular-source search range: the (1-alpha)-fractile of demand over l_r periods.
+    int64_t CdiSearchBound(double mu, double sigma, double b, double h, int64_t l_r)
     {
-        auto gen_weights_path = system.filepath(mdp_identifier, "dcl_policy_gen" + std::to_string(gen));
-        std::vector<VarGroup> instance_results;
-        bool any_loaded = false;
+        double fractile = b / (b + h);
+        return NewsvendorFractile(mu, sigma, fractile, l_r) * 2 + 10;
+    }
+
+    double RandUniform(std::mt19937_64& rng, double lo, double hi)
+    {
+        std::uniform_real_distribution<double> dist(lo, hi);
+        return dist(rng);
+    }
+
+    // Mirrors scripts/large_scale_cdi_comparison.py's sample_instance(), now native so the whole
+    // pipeline (sampling, tuning, evaluation, logging) runs inside one reproducible executable.
+    VarGroup SampleRandomInstance(std::mt19937_64& rng, double mu_lo, double mu_hi, double b_lo, double b_hi,
+        double c_lo, double c_hi, double h_lo, double h_hi, int64_t l_min, int64_t l_max)
+    {
+        double mu = RandUniform(rng, mu_lo, mu_hi);
+        double sigma = mu / 2.0;
+        double b = RandUniform(rng, b_lo, b_hi);
+        double c_e = RandUniform(rng, c_lo, c_hi);
+        double c_r = RandUniform(rng, c_lo, c_e);
+        double h = RandUniform(rng, h_lo, h_hi);
+
+        std::vector<std::pair<int64_t, int64_t>> valid_pairs;
+        for (int64_t a = l_min; a < l_max; a++)
+            for (int64_t bb = a + 1; bb <= l_max; bb++)
+                valid_pairs.push_back({ a, bb });
+        std::uniform_int_distribution<size_t> idx_dist(0, valid_pairs.size() - 1);
+        auto [l_e, l_r] = valid_pairs[idx_dist(rng)];
+
+        VarGroup instance;
+        instance.Add("mu", mu);
+        instance.Add("sigma", sigma);
+        instance.Add("h", h);
+        instance.Add("b", b);
+        instance.Add("c_e", c_e);
+        instance.Add("c_r", c_r);
+        instance.Add("l_e", l_e);
+        instance.Add("l_r", l_r);
+        return instance;
+    }
+
+    // Reads the "instances" block of an experiment spec: either an explicit list, or a random
+    // draw from ranges (mode: "random") using a documented seed for reproducibility.
+    std::vector<VarGroup> LoadInstances(const VarGroup& spec)
+    {
+        VarGroup instances_spec;
+        spec.Get("instances", instances_spec);
+        std::string mode;
+        instances_spec.Get("mode", mode);
+
+        std::vector<VarGroup> instances;
+        if (mode == "explicit")
+        {
+            instances_spec.Get("list", instances);
+            return instances;
+        }
+        if (mode != "random")
+            throw DynaPlex::Error("dual_sourcing_eval: instances.mode must be 'explicit' or 'random', got: " + mode);
+
+        int64_t n_instances, seed, l_min, l_max;
+        instances_spec.Get("n_instances", n_instances);
+        instances_spec.Get("seed", seed);
+        instances_spec.Get("l_min", l_min);
+        instances_spec.Get("l_max", l_max);
+        std::vector<double> mu_range, b_range, c_range, h_range;
+        instances_spec.Get("mu_range", mu_range);
+        instances_spec.Get("b_range", b_range);
+        instances_spec.Get("c_range", c_range);
+        instances_spec.Get("h_range", h_range);
+
+        std::mt19937_64 rng(static_cast<uint64_t>(seed));
+        instances.reserve(n_instances);
+        for (int64_t i = 0; i < n_instances; i++)
+            instances.push_back(SampleRandomInstance(rng, mu_range[0], mu_range[1], b_range[0], b_range[1],
+                c_range[0], c_range[1], h_range[0], h_range[1], l_min, l_max));
+        return instances;
+    }
+
+    // Builds+tunes (for heuristics) or loads (for a trained GCA policy) the policy described by
+    // one entry of the spec's "policies" list, for one specific instance. Returns the policy plus
+    // whatever tuning metadata is relevant (S_r/S_e/etc, empty for GCA).
+    struct ResolvedPolicy {
+        DynaPlex::Policy policy;
+        DynaPlex::MDP mdp;
+        VarGroup tuning_info;
+        bool has_tuning_info = false;
+    };
+
+    ResolvedPolicy ResolvePolicy(const VarGroup& policy_spec, const VarGroup& instance,
+        int64_t train_l_max, int64_t max_order_size, double inventory_cap_multiplier,
+        const VarGroup& tuning_sim_config)
+    {
+        auto& dp = DynaPlexProvider::Get();
+
+        std::string type;
+        policy_spec.Get("type", type);
+        std::string action_representation = "flat_joint";
+        if (policy_spec.HasKey("action_representation"))
+            policy_spec.Get("action_representation", action_representation);
+        bool oracle_mu_init = false;
+        if (policy_spec.HasKey("oracle_mu_init"))
+            policy_spec.Get("oracle_mu_init", oracle_mu_init);
+
+        VarGroup mdp_config = BuildMdpConfig(instance, train_l_max, max_order_size,
+            inventory_cap_multiplier, action_representation, oracle_mu_init);
+        DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
+
+        double mu, sigma, h, b;
+        int64_t l_e, l_r;
+        instance.Get("mu", mu); instance.Get("sigma", sigma);
+        instance.Get("h", h); instance.Get("b", b);
+        instance.Get("l_e", l_e); instance.Get("l_r", l_r);
+        int64_t max_val = CdiSearchBound(mu, sigma, b, h, l_r);
+
+        ResolvedPolicy result;
+        result.mdp = mdp;
+
+        if (type == "gca")
+        {
+            std::string run_path;
+            policy_spec.Get("run_path", run_path);
+            auto& system = dp.System();
+            auto full_path = system.filepath("dual_sourcing", "runs", run_path, "policy_final");
+            result.policy = dp.LoadPolicy(mdp, full_path);
+        }
+        else if (type == "cdi")
+        {
+            VarGroup tuned = TuneCDI(mdp, tuning_sim_config, mu, sigma, b, h, l_r, l_e, max_val);
+            result.tuning_info = tuned; result.has_tuning_info = true;
+            int64_t S_r, S_e;
+            tuned.Get("S_r", S_r); tuned.Get("S_e", S_e);
+            VarGroup pc; pc.Add("id", std::string("cdi")); pc.Add("S_r", S_r); pc.Add("S_e", S_e);
+            result.policy = mdp->GetPolicy(pc);
+        }
+        else if (type == "di")
+        {
+            VarGroup tuned = TuneDI(mdp, tuning_sim_config, mu, sigma, b, h, l_r, max_val);
+            result.tuning_info = tuned; result.has_tuning_info = true;
+            int64_t S; tuned.Get("S", S);
+            VarGroup pc; pc.Add("id", std::string("di")); pc.Add("S", S);
+            result.policy = mdp->GetPolicy(pc);
+        }
+        else if (type == "si")
+        {
+            VarGroup tuned = TuneSI(mdp, tuning_sim_config, mu, sigma, b, h, l_r, max_val);
+            result.tuning_info = tuned; result.has_tuning_info = true;
+            int64_t S; tuned.Get("S", S);
+            VarGroup pc; pc.Add("id", std::string("si")); pc.Add("S", S);
+            result.policy = mdp->GetPolicy(pc);
+        }
+        else if (type == "tbs")
+        {
+            VarGroup tuned = TuneTBS(mdp, tuning_sim_config, mu, sigma, b, h, l_e, max_val);
+            result.tuning_info = tuned; result.has_tuning_info = true;
+            int64_t S_e, c; tuned.Get("S_e", S_e); tuned.Get("c", c);
+            VarGroup pc; pc.Add("id", std::string("tbs")); pc.Add("S_e", S_e); pc.Add("c", c);
+            result.policy = mdp->GetPolicy(pc);
+        }
+        else
+            throw DynaPlex::Error("dual_sourcing_eval: unknown policy type: " + type);
+
+        return result;
+    }
+
+    // Core workhorse: evaluate every policy in spec.policies against every instance in
+    // spec.instances, with raw per-trajectory costs logged for every (policy, instance) pair.
+    // Covers the in-range benchmark table, the OOD sweep, zero-shot comparison, and the
+    // mu-oracle-vs-estimated test - they differ only in which instances/policies the spec lists.
+    void RunCompare(const std::string& spec_name)
+    {
+        auto& dp = DynaPlexProvider::Get();
+        auto& system = dp.System();
+
+        VarGroup spec = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", spec_name));
+
+        int64_t train_l_max = 0, max_order_size;
+        double inventory_cap_multiplier = 3.0;
+        if (spec.HasKey("train_l_max")) spec.Get("train_l_max", train_l_max);
+        spec.Get("max_order_size", max_order_size);
+        if (spec.HasKey("inventory_cap_multiplier")) spec.Get("inventory_cap_multiplier", inventory_cap_multiplier);
+
+        VarGroup sim_config, tuning_sim_config;
+        spec.Get("simulation", sim_config);
+        sim_config.Set("return_raw_trajectories", true);
+        if (spec.HasKey("tuning_simulation"))
+            spec.Get("tuning_simulation", tuning_sim_config);
+        else
+            tuning_sim_config = sim_config;
+
+        std::vector<VarGroup> policy_specs;
+        spec.Get("policies", policy_specs);
+
+        std::vector<VarGroup> instances = LoadInstances(spec);
+
+        system << "dual_sourcing_eval compare: " << instances.size() << " instances x "
+               << policy_specs.size() << " policies" << std::endl;
+
+        std::vector<VarGroup> per_instance_results;
+        per_instance_results.reserve(instances.size());
 
         for (size_t i = 0; i < instances.size(); i++)
         {
             auto& instance = instances[i];
-            auto& tuned_inst = tuned_instances[i];
+            system << "instance " << (i + 1) << "/" << instances.size() << std::endl;
 
-            std::string inst_name;
-            instance.Get("name", inst_name);
+            VarGroup instance_result;
+            instance_result.Add("instance_idx", static_cast<int64_t>(i));
+            instance_result.Add("instance", instance);
 
-            VarGroup gca_mdp_config = BuildInstanceConfig(instance, train_l_max, max_order_size, action_repr);
-            DynaPlex::MDP gca_mdp = dp.GetMDP(gca_mdp_config);
-
-            VarGroup cdi_mdp_config = BuildInstanceConfig(instance, train_l_max, max_order_size, "flat_joint");
-            DynaPlex::MDP cdi_mdp = dp.GetMDP(cdi_mdp_config);
-
-            DynaPlex::Policy gen_policy;
-            try
+            std::vector<VarGroup> policy_results;
+            for (auto& pspec : policy_specs)
             {
-                gen_policy = dp.LoadPolicy(gca_mdp, gen_weights_path);
-                any_loaded = true;
-            }
-            catch (const DynaPlex::Error& e)
-            {
-                system << "LoadPolicy failed: " << e.what() << std::endl;
-                goto save_results;
-            }
+                std::string label;
+                pspec.Get("label", label);
+                try
+                {
+                    ResolvedPolicy resolved = ResolvePolicy(pspec, instance, train_l_max, max_order_size,
+                        inventory_cap_multiplier, tuning_sim_config);
+                    auto comparer = dp.GetPolicyComparer(resolved.mdp, sim_config);
+                    auto assessment = comparer.Assess(resolved.policy);
 
-            auto gca_comparer = dp.GetPolicyComparer(gca_mdp, sim_config);
-            auto gca_result = gca_comparer.Assess(gen_policy);
-            double gca_raw;
-            gca_result.Get("mean", gca_raw);
-            double cost_per_period = gca_raw;
-
-            double cdi_cost = 0.0;
-            {
-                VarGroup cdi_params;
-                tuned_inst.Get("CDI", cdi_params);
-                int64_t S_r, S_e;
-                cdi_params.Get("S_r", S_r);
-                cdi_params.Get("S_e", S_e);
-                VarGroup cdi_policy_config;
-                cdi_policy_config.Add("id", std::string("cdi"));
-                cdi_policy_config.Add("S_r", S_r);
-                cdi_policy_config.Add("S_e", S_e);
-                auto cdi_policy = cdi_mdp->GetPolicy(cdi_policy_config);
-                auto cdi_comparer = dp.GetPolicyComparer(cdi_mdp, sim_config);
-                auto cdi_result = cdi_comparer.Assess(cdi_policy);
-                double cdi_raw;
-                cdi_result.Get("mean", cdi_raw);
-                cdi_cost = cdi_raw;
+                    VarGroup pres;
+                    pres.Add("label", label);
+                    pres.Add("mean", assessment);
+                    if (resolved.has_tuning_info)
+                        pres.Add("tuning_info", resolved.tuning_info);
+                    policy_results.push_back(pres);
+                    double mean_cost;
+                    assessment.Get("mean", mean_cost);
+                    system << "  " << label << ": " << mean_cost << std::endl;
+                }
+                catch (const DynaPlex::Error& e)
+                {
+                    system << "  " << label << " FAILED: " << e.what() << std::endl;
+                    VarGroup pres;
+                    pres.Add("label", label);
+                    pres.Add("error", std::string(e.what()));
+                    policy_results.push_back(pres);
+                }
             }
-
-            VarGroup inst_result;
-            inst_result.Add("instance", inst_name);
-            inst_result.Add("GCA_cost", cost_per_period);
-            inst_result.Add("CDI_cost", cdi_cost);
-            inst_result.Add("gap_vs_CDI_pct", ComputeGap(cost_per_period, cdi_cost));
-            instance_results.push_back(inst_result);
+            instance_result.Add("policies", policy_results);
+            per_instance_results.push_back(instance_result);
         }
 
-        VarGroup gen_result;
-        gen_result.Add("generation", gen);
-        gen_result.Add("instances", instance_results);
-        generation_results.push_back(gen_result);
-        gen++;
+        VarGroup output;
+        output.Add("spec", spec);
+        output.Add("results", per_instance_results);
+
+        std::string output_name;
+        spec.Get("output", output_name);
+        auto out_path = system.filepath("dual_sourcing", "evaluation", output_name);
+        output.SaveToFile(out_path, 2);
+        system << "Done. Results saved to " << out_path << std::endl;
     }
-
-    save_results:
-    VarGroup output;
-    output.Add("experiment", std::string("convergence"));
-    output.Add("action_representation", action_repr);
-    output.Add("generations_evaluated", gen - 1);
-    output.Add("generations", generation_results);
-
-    auto out_path = system.filepath("dual_sourcing", "evaluation", "convergence_" + action_repr + ".json");
-    output.SaveToFile(out_path, 4);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
-    auto &dp = DynaPlexProvider::Get();
-    auto &system = dp.System();
+    auto& dp = DynaPlexProvider::Get();
+    auto& system = dp.System();
 
     if (argc < 3)
     {
-        system << "Usage: dual_sourcing_eval <mode> <config>" << std::endl;
-        system << "Modes: eval | parameter | horizon | convergence" << std::endl;
+        system << "Usage: dual_sourcing_eval <mode> <spec.json>" << std::endl;
+        system << "Modes: compare" << std::endl;
         return 1;
     }
 
     std::string mode = argv[1];
-    std::string config_name = argv[2];
+    std::string spec_name = argv[2];
 
-    if (mode == "eval")
-        RunEval(config_name);
-    else if (mode == "parameter")
-        RunParameterEvaluation(config_name);
-    // else if (mode == "horizon")
-    //     RunHorizon(config_name);
-    else if (mode == "convergence")
-        RunConvergence(config_name);
+    if (mode == "compare")
+        RunCompare(spec_name);
     else
     {
         system << "Unknown mode: " << mode << std::endl;
