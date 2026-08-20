@@ -1,0 +1,21 @@
+{
+    "id": "dual_sourcing_backlog",
+    "K": 2,
+    "l_min": 1,
+    "l_max": 2,
+    "min_h": 1.0,
+    "max_h": 1.0,
+    "min_b": 5.0,
+    "max_b": 15.0,
+    "min_c": 0.0,
+    "max_c": 1.0,
+    "min_mu": 4.0,
+    "max_mu": 8.0,
+    "mu_values": [4.0, 8.0],
+    "b_values": [5.0, 15.0],
+    "action_representation": "sequential",
+    "discount_factor": 1.0,
+    "max_order_size": 60,
+    "inventory_cap_multiplier": 3.0,
+    "rollout_M": 100
+}

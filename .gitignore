@@ -39,4 +39,11 @@ IO_DynaPlex/DeepControlledLearning/
 IO_DynaPlex/lost_sales_general/
 IO_DynaPlex/Zero_Shot_Lost_Sales_Inventory_Control/
 
+# CMake-generated copy of src/lib/models/models/*/*.json (see src/lib/models/CMakeLists.txt) -
+# the versioned source lives under src/lib/models/models/<model>/configs/, this is a build artifact
+IO_DynaPlex/mdp_config_examples/
+
+# scratch files written by scripts/run_sweep.py
+scripts/_sweep_tmp_*.json
+
 *.pth

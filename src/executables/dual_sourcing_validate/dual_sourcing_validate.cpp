@@ -875,6 +875,76 @@ void DebugEvalK2FixedVsCDI(const DynaPlex::System& system, const std::string& ru
     system << "Gap vs CDI: " << gap << "%" << std::endl;
 }
 
+// Like DebugEvalK2FixedVsCDI, but loads a specific generation's checkpoint (dcl_policy_gen<N>)
+// instead of the run's final policy - enabling live per-generation evaluation while a run is
+// still in progress. Per-generation checkpoints are saved under a path keyed by the *training*
+// mdp's Identifier() (see PolicyTrainer::PathToPolicy), not under the run's own timestamped
+// directory, so this reads run_info.json (written by dual_sourcing_gca at launch) to recover
+// that identifier rather than requiring the caller to know DynaPlex's internal hashing scheme.
+void DebugEvalK2GenVsCDI(const DynaPlex::System& system, const std::string& run_path, int64_t generation,
+    double mu, double sigma, double h, double b, int64_t l_e, int64_t l_r, double c_e,
+    int64_t max_order_size, int64_t S_r, int64_t S_e, double inventory_cap_multiplier,
+    int64_t struct_l_min, int64_t struct_l_max, double c_r, const std::string& action_representation,
+    int64_t number_of_trajectories, int64_t periods_per_trajectory)
+{
+    auto& dp = DynaPlexProvider::Get();
+    if (struct_l_min <= 0) struct_l_min = l_e;
+    if (struct_l_max <= 0) struct_l_max = l_r;
+
+    VarGroup run_info = VarGroup::LoadFromFile(system.filepath("dual_sourcing", "runs", run_path, "run_info.json"));
+    std::string mdp_identifier;
+    run_info.Get("mdp_identifier", mdp_identifier);
+
+    VarGroup mdp_config;
+    mdp_config.Add("id", std::string("dual_sourcing_backlog"));
+    mdp_config.Add("K", int64_t(2));
+    mdp_config.Add("l_min", struct_l_min);
+    mdp_config.Add("l_max", struct_l_max);
+    mdp_config.Add("min_h", h); mdp_config.Add("max_h", h);
+    mdp_config.Add("min_b", b); mdp_config.Add("max_b", b);
+    mdp_config.Add("min_c", c_r); mdp_config.Add("max_c", c_e);
+    mdp_config.Add("min_mu", mu); mdp_config.Add("max_mu", mu);
+    mdp_config.Add("action_representation", action_representation);
+    mdp_config.Add("discount_factor", 1.0);
+    mdp_config.Add("max_order_size", max_order_size);
+    if (inventory_cap_multiplier > 0.0)
+        mdp_config.Add("inventory_cap_multiplier", inventory_cap_multiplier);
+
+    VarGroup fixed_instance;
+    fixed_instance.Add("h", h);
+    fixed_instance.Add("b", b);
+    fixed_instance.Add("mu", mu);
+    fixed_instance.Add("sigma", sigma);
+    fixed_instance.Add("l_e", l_e);
+    fixed_instance.Add("l_r", l_r);
+    std::vector<double> costs = { c_e, c_r };
+    fixed_instance.Add("costs", costs);
+    mdp_config.Add("fixed_instance", fixed_instance);
+
+    DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
+
+    VarGroup sim_config;
+    sim_config.Add("warmup_periods", int64_t(100));
+    sim_config.Add("periods_per_trajectory", periods_per_trajectory);
+    sim_config.Add("number_of_trajectories", number_of_trajectories);
+
+    VarGroup cdi_config;
+    cdi_config.Add("id", std::string("cdi"));
+    cdi_config.Add("S_r", S_r);
+    cdi_config.Add("S_e", S_e);
+    auto cdi_policy = mdp->GetPolicy(cdi_config);
+    double cdi_cost = EvaluatePolicyTuning(mdp, cdi_policy, sim_config);
+
+    auto full_path = system.filepath(mdp_identifier, "dcl_policy_gen" + std::to_string(generation));
+    auto network_policy = dp.LoadPolicy(mdp, full_path);
+    double gca_cost = EvaluatePolicyTuning(mdp, network_policy, sim_config);
+
+    double gap = (gca_cost - cdi_cost) / cdi_cost * 100.0;
+
+    system << "GEN=" << generation << " CDI cost: " << cdi_cost
+        << " GCA-DS cost: " << gca_cost << " Gap vs CDI: " << gap << "%" << std::endl;
+}
+
 // Evaluates a trained K=1 policy against tuned base_stock, on the same fixed instance the
 // tune_k1_base_stock diagnostic tunes S for.
 void DebugEvalK1FixedVsBaseStock(const DynaPlex::System& system, const std::string& run_path,
@@ -1161,6 +1231,30 @@ int main(int argc, char* argv[])
         int64_t S_r = argc > 11 ? std::stoll(argv[11]) : 17;
         int64_t S_e = argc > 12 ? std::stoll(argv[12]) : 8;
         DebugTraceK2Actions(system, run_path, mu, sigma, h, b, l_e, l_r, c_e, max_order_size, S_r, S_e);
+        return 0;
+    }
+    if (argc > 1 && std::string(argv[1]) == "eval_k2_gen")
+    {
+        std::string run_path = argc > 2 ? std::string(argv[2]) : std::string();
+        int64_t generation = argc > 3 ? std::stoll(argv[3]) : 1;
+        double mu = argc > 4 ? std::stod(argv[4]) : 4.0;
+        double sigma = argc > 5 ? std::stod(argv[5]) : 2.0;
+        double h = argc > 6 ? std::stod(argv[6]) : 1.0;
+        double b = argc > 7 ? std::stod(argv[7]) : 9.0;
+        int64_t l_e = argc > 8 ? std::stoll(argv[8]) : 1;
+        int64_t l_r = argc > 9 ? std::stoll(argv[9]) : 2;
+        double c_e = argc > 10 ? std::stod(argv[10]) : 1.0;
+        int64_t max_order_size = argc > 11 ? std::stoll(argv[11]) : 40;
+        int64_t S_r = argc > 12 ? std::stoll(argv[12]) : 17;
+        int64_t S_e = argc > 13 ? std::stoll(argv[13]) : 8;
+        double inventory_cap_multiplier = argc > 14 ? std::stod(argv[14]) : 0.0;
+        int64_t struct_l_min = argc > 15 ? std::stoll(argv[15]) : 0;
+        int64_t struct_l_max = argc > 16 ? std::stoll(argv[16]) : 0;
+        double c_r = argc > 17 ? std::stod(argv[17]) : 0.0;
+        std::string action_representation = argc > 18 ? std::string(argv[18]) : std::string("sequential");
+        int64_t number_of_trajectories = argc > 19 ? std::stoll(argv[19]) : 300;
+        int64_t periods_per_trajectory = argc > 20 ? std::stoll(argv[20]) : 2000;
+        DebugEvalK2GenVsCDI(system, run_path, generation, mu, sigma, h, b, l_e, l_r, c_e, max_order_size, S_r, S_e, inventory_cap_multiplier, struct_l_min, struct_l_max, c_r, action_representation, number_of_trajectories, periods_per_trajectory);
         return 0;
     }
     if (argc > 1 && std::string(argv[1]) == "eval_k1_fixed")

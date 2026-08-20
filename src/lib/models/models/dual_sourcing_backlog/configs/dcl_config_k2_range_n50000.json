@@ -1,0 +1,18 @@
+{
+    "N": 50000,
+    "num_gens": 5,
+    "SimulateOnlyPromisingActions": false,
+    "retrain_lastgen_only": false,
+    "initial_policy": {
+        "id": "adaptive_cdi"
+    },
+    "nn_architecture": {
+        "type": "mlp",
+        "hidden_layers": [256, 128, 128, 128]
+    },
+    "nn_training": {
+        "early_stopping_patience": 15,
+        "mini_batch_size": 1024,
+        "max_training_epochs": 100
+    }
+}
