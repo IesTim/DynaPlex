@@ -1,0 +1,8 @@
+{
+    "action_representation": "sequential",
+    "dcl_config": "dcl_config_minimal_cdiwarmup_fallback.json",
+    "mdp_config": "mdp_config_minimal_fullaction.json",
+    "mdp_identifier": "dual_sourcing_backlog_wPNJXylnj=ja=9yrYVxI0LrKmY6i2xz5Ej7TZF=tDIw__",
+    "num_gens": 5,
+    "timestamp": "20260808_154027"
+}

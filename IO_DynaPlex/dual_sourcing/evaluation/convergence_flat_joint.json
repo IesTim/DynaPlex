@@ -1,0 +1,572 @@
+{
+    "action_representation": "flat_joint",
+    "experiment": "convergence",
+    "generations": [
+        {
+            "generation": 1,
+            "instances": [
+                {
+                    "CDI_cost": 15.41350720000001,
+                    "GCA_cost": 38.38396220000007,
+                    "gap_vs_CDI_pct": 149.0280875205355,
+                    "instance": "instance_1"
+                },
+                {
+                    "CDI_cost": 32.76191699999998,
+                    "GCA_cost": 81.1146838000001,
+                    "gap_vs_CDI_pct": 147.5883319037776,
+                    "instance": "instance_2"
+                },
+                {
+                    "CDI_cost": 49.02046319999997,
+                    "GCA_cost": 137.13476879999996,
+                    "gap_vs_CDI_pct": 179.75004691510145,
+                    "instance": "instance_3"
+                },
+                {
+                    "CDI_cost": 17.891592199999995,
+                    "GCA_cost": 109.91359839999997,
+                    "gap_vs_CDI_pct": 514.3310062700848,
+                    "instance": "instance_4"
+                },
+                {
+                    "CDI_cost": 35.280536600000005,
+                    "GCA_cost": 114.92777879999991,
+                    "gap_vs_CDI_pct": 225.75405556615004,
+                    "instance": "instance_5"
+                },
+                {
+                    "CDI_cost": 50.32625060000002,
+                    "GCA_cost": 179.46209860000013,
+                    "gap_vs_CDI_pct": 256.59739491898506,
+                    "instance": "instance_6"
+                },
+                {
+                    "CDI_cost": 20.6797938,
+                    "GCA_cost": 109.32024999999994,
+                    "gap_vs_CDI_pct": 428.63317234816896,
+                    "instance": "instance_7"
+                },
+                {
+                    "CDI_cost": 37.610103599999995,
+                    "GCA_cost": 105.91644380000001,
+                    "gap_vs_CDI_pct": 181.6169955990231,
+                    "instance": "instance_8"
+                },
+                {
+                    "CDI_cost": 52.14072440000005,
+                    "GCA_cost": 162.58559119999995,
+                    "gap_vs_CDI_pct": 211.82073718945068,
+                    "instance": "instance_9"
+                },
+                {
+                    "CDI_cost": 23.725461600000017,
+                    "GCA_cost": 71.25848420000005,
+                    "gap_vs_CDI_pct": 200.34603921046582,
+                    "instance": "instance_10"
+                },
+                {
+                    "CDI_cost": 39.81025800000008,
+                    "GCA_cost": 101.80367919999983,
+                    "gap_vs_CDI_pct": 155.72222918022692,
+                    "instance": "instance_11"
+                },
+                {
+                    "CDI_cost": 54.06767680000001,
+                    "GCA_cost": 164.28477779999992,
+                    "gap_vs_CDI_pct": 203.8502623438037,
+                    "instance": "instance_12"
+                },
+                {
+                    "CDI_cost": 35.73581080000006,
+                    "GCA_cost": 121.3775133999999,
+                    "gap_vs_CDI_pct": 239.6523282465993,
+                    "instance": "instance_13"
+                },
+                {
+                    "CDI_cost": 71.25844060000006,
+                    "GCA_cost": 118.69080720000017,
+                    "gap_vs_CDI_pct": 66.5638571383501,
+                    "instance": "instance_14"
+                },
+                {
+                    "CDI_cost": 101.53058519999992,
+                    "GCA_cost": 171.0978673999999,
+                    "gap_vs_CDI_pct": 68.51854745342297,
+                    "instance": "instance_15"
+                },
+                {
+                    "CDI_cost": 41.34692939999996,
+                    "GCA_cost": 129.72067520000004,
+                    "gap_vs_CDI_pct": 213.73714344069325,
+                    "instance": "instance_16"
+                },
+                {
+                    "CDI_cost": 75.85528860000002,
+                    "GCA_cost": 119.9048108000002,
+                    "gap_vs_CDI_pct": 58.07046945966029,
+                    "instance": "instance_17"
+                },
+                {
+                    "CDI_cost": 105.201271,
+                    "GCA_cost": 155.616676,
+                    "gap_vs_CDI_pct": 47.922809791908314,
+                    "instance": "instance_18"
+                }
+            ]
+        },
+        {
+            "generation": 2,
+            "instances": [
+                {
+                    "CDI_cost": 15.41350720000001,
+                    "GCA_cost": 75.67264420000008,
+                    "gap_vs_CDI_pct": 390.95019853755304,
+                    "instance": "instance_1"
+                },
+                {
+                    "CDI_cost": 32.76191699999998,
+                    "GCA_cost": 191.38225120000018,
+                    "gap_vs_CDI_pct": 484.16072295159125,
+                    "instance": "instance_2"
+                },
+                {
+                    "CDI_cost": 49.02046319999997,
+                    "GCA_cost": 245.31583020000022,
+                    "gap_vs_CDI_pct": 400.4355613677685,
+                    "instance": "instance_3"
+                },
+                {
+                    "CDI_cost": 17.891592199999995,
+                    "GCA_cost": 97.01061699999991,
+                    "gap_vs_CDI_pct": 442.2134369908115,
+                    "instance": "instance_4"
+                },
+                {
+                    "CDI_cost": 35.280536600000005,
+                    "GCA_cost": 190.52514020000007,
+                    "gap_vs_CDI_pct": 440.02903175798076,
+                    "instance": "instance_5"
+                },
+                {
+                    "CDI_cost": 50.32625060000002,
+                    "GCA_cost": 220.34973260000004,
+                    "gap_vs_CDI_pct": 337.8425373894234,
+                    "instance": "instance_6"
+                },
+                {
+                    "CDI_cost": 20.6797938,
+                    "GCA_cost": 97.15513399999989,
+                    "gap_vs_CDI_pct": 369.8070732213969,
+                    "instance": "instance_7"
+                },
+                {
+                    "CDI_cost": 37.610103599999995,
+                    "GCA_cost": 256.80948979999994,
+                    "gap_vs_CDI_pct": 582.8204796543022,
+                    "instance": "instance_8"
+                },
+                {
+                    "CDI_cost": 52.14072440000005,
+                    "GCA_cost": 266.1255725999998,
+                    "gap_vs_CDI_pct": 410.39868675088746,
+                    "instance": "instance_9"
+                },
+                {
+                    "CDI_cost": 23.725461600000017,
+                    "GCA_cost": 108.49009439999998,
+                    "gap_vs_CDI_pct": 357.2728498567964,
+                    "instance": "instance_10"
+                },
+                {
+                    "CDI_cost": 39.81025800000008,
+                    "GCA_cost": 192.56004659999996,
+                    "gap_vs_CDI_pct": 383.69454576255083,
+                    "instance": "instance_11"
+                },
+                {
+                    "CDI_cost": 54.06767680000001,
+                    "GCA_cost": 268.6759889999996,
+                    "gap_vs_CDI_pct": 396.925344127232,
+                    "instance": "instance_12"
+                },
+                {
+                    "CDI_cost": 35.73581080000006,
+                    "GCA_cost": 190.32464720000007,
+                    "gap_vs_CDI_pct": 432.5880200820846,
+                    "instance": "instance_13"
+                },
+                {
+                    "CDI_cost": 71.25844060000006,
+                    "GCA_cost": 362.86026300000054,
+                    "gap_vs_CDI_pct": 409.2172379085156,
+                    "instance": "instance_14"
+                },
+                {
+                    "CDI_cost": 101.53058519999992,
+                    "GCA_cost": 344.0120708,
+                    "gap_vs_CDI_pct": 238.82604943362455,
+                    "instance": "instance_15"
+                },
+                {
+                    "CDI_cost": 41.34692939999996,
+                    "GCA_cost": 180.9119974000001,
+                    "gap_vs_CDI_pct": 337.54639105074705,
+                    "instance": "instance_16"
+                },
+                {
+                    "CDI_cost": 75.85528860000002,
+                    "GCA_cost": 376.7957595999999,
+                    "gap_vs_CDI_pct": 396.7297159554934,
+                    "instance": "instance_17"
+                },
+                {
+                    "CDI_cost": 105.201271,
+                    "GCA_cost": 422.27618620000055,
+                    "gap_vs_CDI_pct": 301.3983692269274,
+                    "instance": "instance_18"
+                }
+            ]
+        },
+        {
+            "generation": 3,
+            "instances": [
+                {
+                    "CDI_cost": 15.41350720000001,
+                    "GCA_cost": 1432.1161802000001,
+                    "gap_vs_CDI_pct": 9191.306395211592,
+                    "instance": "instance_1"
+                },
+                {
+                    "CDI_cost": 32.76191699999998,
+                    "GCA_cost": 507.47402659999983,
+                    "gap_vs_CDI_pct": 1448.9753746705362,
+                    "instance": "instance_2"
+                },
+                {
+                    "CDI_cost": 49.02046319999997,
+                    "GCA_cost": 242.48255899999972,
+                    "gap_vs_CDI_pct": 394.6557889726343,
+                    "instance": "instance_3"
+                },
+                {
+                    "CDI_cost": 17.891592199999995,
+                    "GCA_cost": 2508.5117299999997,
+                    "gap_vs_CDI_pct": 13920.617628429964,
+                    "instance": "instance_4"
+                },
+                {
+                    "CDI_cost": 35.280536600000005,
+                    "GCA_cost": 7039.720868600005,
+                    "gap_vs_CDI_pct": 19853.553848724634,
+                    "instance": "instance_5"
+                },
+                {
+                    "CDI_cost": 50.32625060000002,
+                    "GCA_cost": 324.72221020000046,
+                    "gap_vs_CDI_pct": 545.2342591164546,
+                    "instance": "instance_6"
+                },
+                {
+                    "CDI_cost": 20.6797938,
+                    "GCA_cost": 1389.1725379999984,
+                    "gap_vs_CDI_pct": 6617.535732875628,
+                    "instance": "instance_7"
+                },
+                {
+                    "CDI_cost": 37.610103599999995,
+                    "GCA_cost": 6090.107323799998,
+                    "gap_vs_CDI_pct": 16092.742749583915,
+                    "instance": "instance_8"
+                },
+                {
+                    "CDI_cost": 52.14072440000005,
+                    "GCA_cost": 319.6140061999996,
+                    "gap_vs_CDI_pct": 512.9834402530842,
+                    "instance": "instance_9"
+                },
+                {
+                    "CDI_cost": 23.725461600000017,
+                    "GCA_cost": 948.2170923999993,
+                    "gap_vs_CDI_pct": 3896.6223139784925,
+                    "instance": "instance_10"
+                },
+                {
+                    "CDI_cost": 39.81025800000008,
+                    "GCA_cost": 4996.250723799995,
+                    "gap_vs_CDI_pct": 12450.159116778355,
+                    "instance": "instance_11"
+                },
+                {
+                    "CDI_cost": 54.06767680000001,
+                    "GCA_cost": 440.05272960000013,
+                    "gap_vs_CDI_pct": 713.8924319381891,
+                    "instance": "instance_12"
+                },
+                {
+                    "CDI_cost": 35.73581080000006,
+                    "GCA_cost": 4176.941134599996,
+                    "gap_vs_CDI_pct": 11588.39055583983,
+                    "instance": "instance_13"
+                },
+                {
+                    "CDI_cost": 71.25844060000006,
+                    "GCA_cost": 6424.104491200003,
+                    "gap_vs_CDI_pct": 8915.219021225674,
+                    "instance": "instance_14"
+                },
+                {
+                    "CDI_cost": 101.53058519999992,
+                    "GCA_cost": 400.64240600000016,
+                    "gap_vs_CDI_pct": 294.6026758447173,
+                    "instance": "instance_15"
+                },
+                {
+                    "CDI_cost": 41.34692939999996,
+                    "GCA_cost": 2807.8500716000003,
+                    "gap_vs_CDI_pct": 6690.951861107255,
+                    "instance": "instance_16"
+                },
+                {
+                    "CDI_cost": 75.85528860000002,
+                    "GCA_cost": 6190.093576600005,
+                    "gap_vs_CDI_pct": 8060.398161875827,
+                    "instance": "instance_17"
+                },
+                {
+                    "CDI_cost": 105.201271,
+                    "GCA_cost": 1008.3753415999996,
+                    "gap_vs_CDI_pct": 858.5201129366579,
+                    "instance": "instance_18"
+                }
+            ]
+        },
+        {
+            "generation": 4,
+            "instances": [
+                {
+                    "CDI_cost": 15.41350720000001,
+                    "GCA_cost": 146.5210903999999,
+                    "gap_vs_CDI_pct": 850.601887674207,
+                    "instance": "instance_1"
+                },
+                {
+                    "CDI_cost": 32.76191699999998,
+                    "GCA_cost": 573.8144006000007,
+                    "gap_vs_CDI_pct": 1651.4677196697644,
+                    "instance": "instance_2"
+                },
+                {
+                    "CDI_cost": 49.02046319999997,
+                    "GCA_cost": 638.5272419999998,
+                    "gap_vs_CDI_pct": 1202.5728447217123,
+                    "instance": "instance_3"
+                },
+                {
+                    "CDI_cost": 17.891592199999995,
+                    "GCA_cost": 140.6810300000002,
+                    "gap_vs_CDI_pct": 686.2968730083186,
+                    "instance": "instance_4"
+                },
+                {
+                    "CDI_cost": 35.280536600000005,
+                    "GCA_cost": 701.6735535999987,
+                    "gap_vs_CDI_pct": 1888.8403670141417,
+                    "instance": "instance_5"
+                },
+                {
+                    "CDI_cost": 50.32625060000002,
+                    "GCA_cost": 1399.5021080000008,
+                    "gap_vs_CDI_pct": 2680.859077151279,
+                    "instance": "instance_6"
+                },
+                {
+                    "CDI_cost": 20.6797938,
+                    "GCA_cost": 141.18146040000002,
+                    "gap_vs_CDI_pct": 582.7024571202447,
+                    "instance": "instance_7"
+                },
+                {
+                    "CDI_cost": 37.610103599999995,
+                    "GCA_cost": 566.745872,
+                    "gap_vs_CDI_pct": 1406.8979283534863,
+                    "instance": "instance_8"
+                },
+                {
+                    "CDI_cost": 52.14072440000005,
+                    "GCA_cost": 1312.6072578000005,
+                    "gap_vs_CDI_pct": 2417.4319553565683,
+                    "instance": "instance_9"
+                },
+                {
+                    "CDI_cost": 23.725461600000017,
+                    "GCA_cost": 151.20401299999983,
+                    "gap_vs_CDI_pct": 537.3069386350727,
+                    "instance": "instance_10"
+                },
+                {
+                    "CDI_cost": 39.81025800000008,
+                    "GCA_cost": 498.6857541999999,
+                    "gap_vs_CDI_pct": 1152.6564238794908,
+                    "instance": "instance_11"
+                },
+                {
+                    "CDI_cost": 54.06767680000001,
+                    "GCA_cost": 1249.5464182000003,
+                    "gap_vs_CDI_pct": 2211.0784338342423,
+                    "instance": "instance_12"
+                },
+                {
+                    "CDI_cost": 35.73581080000006,
+                    "GCA_cost": 300.1394907999999,
+                    "gap_vs_CDI_pct": 739.8843739121189,
+                    "instance": "instance_13"
+                },
+                {
+                    "CDI_cost": 71.25844060000006,
+                    "GCA_cost": 508.8250797999999,
+                    "gap_vs_CDI_pct": 614.0558725614317,
+                    "instance": "instance_14"
+                },
+                {
+                    "CDI_cost": 101.53058519999992,
+                    "GCA_cost": 600.3073856000009,
+                    "gap_vs_CDI_pct": 491.25768300998755,
+                    "instance": "instance_15"
+                },
+                {
+                    "CDI_cost": 41.34692939999996,
+                    "GCA_cost": 269.79788440000027,
+                    "gap_vs_CDI_pct": 552.5221783458496,
+                    "instance": "instance_16"
+                },
+                {
+                    "CDI_cost": 75.85528860000002,
+                    "GCA_cost": 773.5091477999993,
+                    "gap_vs_CDI_pct": 919.7168346150081,
+                    "instance": "instance_17"
+                },
+                {
+                    "CDI_cost": 105.201271,
+                    "GCA_cost": 809.7094659999996,
+                    "gap_vs_CDI_pct": 669.6765051441247,
+                    "instance": "instance_18"
+                }
+            ]
+        },
+        {
+            "generation": 5,
+            "instances": [
+                {
+                    "CDI_cost": 15.41350720000001,
+                    "GCA_cost": 149.16254879999994,
+                    "gap_vs_CDI_pct": 867.7391839801383,
+                    "instance": "instance_1"
+                },
+                {
+                    "CDI_cost": 32.76191699999998,
+                    "GCA_cost": 111.68314200000002,
+                    "gap_vs_CDI_pct": 240.89318399774982,
+                    "instance": "instance_2"
+                },
+                {
+                    "CDI_cost": 49.02046319999997,
+                    "GCA_cost": 7033.089021400011,
+                    "gap_vs_CDI_pct": 14247.251254451663,
+                    "instance": "instance_3"
+                },
+                {
+                    "CDI_cost": 17.891592199999995,
+                    "GCA_cost": 1743.7580176000001,
+                    "gap_vs_CDI_pct": 9646.242805601174,
+                    "instance": "instance_4"
+                },
+                {
+                    "CDI_cost": 35.280536600000005,
+                    "GCA_cost": 317.13018899999975,
+                    "gap_vs_CDI_pct": 798.8814217751998,
+                    "instance": "instance_5"
+                },
+                {
+                    "CDI_cost": 50.32625060000002,
+                    "GCA_cost": 7185.508866399998,
+                    "gap_vs_CDI_pct": 14177.854560458742,
+                    "instance": "instance_6"
+                },
+                {
+                    "CDI_cost": 20.6797938,
+                    "GCA_cost": 7918.484829200001,
+                    "gap_vs_CDI_pct": 38190.92739406329,
+                    "instance": "instance_7"
+                },
+                {
+                    "CDI_cost": 37.610103599999995,
+                    "GCA_cost": 1315.4891998000032,
+                    "gap_vs_CDI_pct": 3397.7016117552075,
+                    "instance": "instance_8"
+                },
+                {
+                    "CDI_cost": 52.14072440000005,
+                    "GCA_cost": 3960.1912695999986,
+                    "gap_vs_CDI_pct": 7495.19802452149,
+                    "instance": "instance_9"
+                },
+                {
+                    "CDI_cost": 23.725461600000017,
+                    "GCA_cost": 9051.153665999997,
+                    "gap_vs_CDI_pct": 38049.53663957371,
+                    "instance": "instance_10"
+                },
+                {
+                    "CDI_cost": 39.81025800000008,
+                    "GCA_cost": 11974.084075600014,
+                    "gap_vs_CDI_pct": 29977.88614582701,
+                    "instance": "instance_11"
+                },
+                {
+                    "CDI_cost": 54.06767680000001,
+                    "GCA_cost": 12674.053169199999,
+                    "gap_vs_CDI_pct": 23341.09072058372,
+                    "instance": "instance_12"
+                },
+                {
+                    "CDI_cost": 35.73581080000006,
+                    "GCA_cost": 297.96078439999997,
+                    "gap_vs_CDI_pct": 733.7876704899037,
+                    "instance": "instance_13"
+                },
+                {
+                    "CDI_cost": 71.25844060000006,
+                    "GCA_cost": 366.339993,
+                    "gap_vs_CDI_pct": 414.10049099502714,
+                    "instance": "instance_14"
+                },
+                {
+                    "CDI_cost": 101.53058519999992,
+                    "GCA_cost": 5950.159065200005,
+                    "gap_vs_CDI_pct": 5760.459735831414,
+                    "instance": "instance_15"
+                },
+                {
+                    "CDI_cost": 41.34692939999996,
+                    "GCA_cost": 299.84098919999985,
+                    "gap_vs_CDI_pct": 625.1832084053143,
+                    "instance": "instance_16"
+                },
+                {
+                    "CDI_cost": 75.85528860000002,
+                    "GCA_cost": 465.79191040000023,
+                    "gap_vs_CDI_pct": 514.0533099230739,
+                    "instance": "instance_17"
+                },
+                {
+                    "CDI_cost": 105.201271,
+                    "GCA_cost": 597.6368924000006,
+                    "gap_vs_CDI_pct": 468.08904181395354,
+                    "instance": "instance_18"
+                }
+            ]
+        }
+    ],
+    "generations_evaluated": 5
+}

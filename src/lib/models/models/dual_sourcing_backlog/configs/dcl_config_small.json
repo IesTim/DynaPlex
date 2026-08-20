@@ -1,11 +1,11 @@
 {
-    "N": 50000,
+    "N": 500000,
     "num_gens": 5,
-    "H": 10,
-    "M": 100,
+    "H": 20,
+    "M": 300,
     "L": 100,
     "SimulateOnlyPromisingActions": true,
-    "Num_Promising_Actions": 8,
+    "Num_Promising_Actions": 24,
     "retrain_lastgen_only": false,
     "nn_architecture": {
         "type": "mlp",

@@ -1,0 +1,8 @@
+{
+    "action_representation": "sequential",
+    "dcl_config": "dcl_config_smoketest.json",
+    "mdp_config": "mdp_config_sequential_capped.json",
+    "mdp_identifier": "dual_sourcing_backlog_IXAf6GsqPpu8u-vym5bphIHdbmtV4WeasiwVS7NGAHI__",
+    "num_gens": 3,
+    "timestamp": "20260807_000359"
+}

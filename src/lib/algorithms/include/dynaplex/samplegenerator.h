@@ -42,5 +42,11 @@ namespace DynaPlex::DCL {
 		DynaPlex::DCL::UniformActionSelector uniform_action_selector;
 		DynaPlex::DCL::SequentialHalving sequentialhalving_action_selector;
 
+		// If set (via config key "warmup_policy"), this policy - not the policy being
+		// evaluated/trained - drives the L-period warmup phase. Warmup exists to reach a
+		// representative state before sampling begins; using a reliable fixed heuristic here
+		// (e.g. CDI) avoids relying on a possibly-still-immature network to get there safely.
+		DynaPlex::Policy warmup_policy;
+
 	};
 }

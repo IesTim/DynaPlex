@@ -9,6 +9,17 @@ namespace DynaPlex ::TorchAvailability {
     bool TorchAvailable()
     {
 #if DP_TORCH_AVAILABLE
+        // DynaPlex already parallelizes across samples/trajectories with its own
+        // thread pool (sized to hardware concurrency). Without this, every one of
+        // those worker threads independently invokes libtorch's own default
+        // intra-op thread pool (also sized to hardware concurrency) whenever it
+        // calls into the network - nesting two full-width thread pools and causing
+        // severe oversubscription (observed: ~8000+ live threads on a 128-core
+        // machine). Networks here are tiny (few small linear layers), so per-call
+        // intra-op parallelism buys nothing anyway; disabling it lets our own
+        // outer-level parallelism do the work without contention.
+        torch::set_num_threads(1);
+        torch::set_num_interop_threads(1);
         return true;
 #else
 

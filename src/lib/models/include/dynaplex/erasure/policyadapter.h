@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include "dynaplex/policy.h"
 #include "dynaplex/trajectory.h"
 #include "dynaplex/vargroup.h"
@@ -117,16 +118,60 @@ namespace DynaPlex::Erasure
 				{
 					return policy.GetPromisingActions(state, num_actions);
 				}
-				//or return the allowed actions if GetPromisingActions not implemented
-				else 
+				//or return (a subset of) the allowed actions if GetPromisingActions not implemented.
+				//Note: without this cap, SimulateOnlyPromisingActions is silently ignored for any
+				//policy lacking its own GetPromisingActions (e.g. the default "random" policy used
+				//to generate the first DCL generation), which is harmless for small action spaces but
+				//becomes prohibitively expensive as the action space grows (cost scales with the
+				//number of returned actions in downstream rollout comparisons).
+				else
 				{
 					ActionRangeProvider<t_MDP> provider(mdp);
 					auto actions = provider(state);
+					int64_t count = actions.Count();
 					std::vector<int64_t> vec;
 					vec.reserve(actions.Count());
 					for (int64_t action : actions)
 					{
 						vec.push_back(action);
+					}
+					if (num_actions > 0 && count > num_actions)
+					{
+						// If the policy can offer a concrete reference action (e.g. a heuristic
+						// like CDI that has GetAction(state) but no GetPromisingActions), center
+						// the candidate window on that action instead of spreading uniformly
+						// across the whole range. A uniform grid ignores what the policy would
+						// actually do - for a heuristic that (correctly) prescribes small order
+						// quantities, an evenly-spaced grid over e.g. [0,270] with 12 points steps
+						// in ~25-unit increments, so every rollout-selected "best" action gets
+						// discretized to the nearest multiple of ~25 regardless of the heuristic's
+						// real (often much smaller) recommendation - corrupting the training
+						// labels generated whenever this policy drives sampling. Policies needing
+						// an RNG (e.g. "random") have no meaningful single reference action, so
+						// they keep the uniform-grid behavior below.
+						if constexpr (HasGetAction<t_Policy, t_State>)
+						{
+							int64_t reference_action = policy.GetAction(state);
+							auto it = std::lower_bound(vec.begin(), vec.end(), reference_action);
+							int64_t ref_idx = std::min(static_cast<int64_t>(it - vec.begin()), count - 1);
+							int64_t half = num_actions / 2;
+							int64_t start_idx = ref_idx - half;
+							if (start_idx < 0) start_idx = 0;
+							if (start_idx + num_actions > count) start_idx = count - num_actions;
+							std::vector<int64_t> windowed;
+							windowed.reserve(num_actions);
+							for (int64_t i = 0; i < num_actions; i++)
+								windowed.push_back(vec[start_idx + i]);
+							return windowed;
+						}
+						std::vector<int64_t> subsampled;
+						subsampled.reserve(num_actions);
+						for (int64_t i = 0; i < num_actions; i++)
+						{
+							int64_t idx = num_actions == 1 ? 0 : (i * (count - 1)) / (num_actions - 1);
+							subsampled.push_back(vec[idx]);
+						}
+						return subsampled;
 					}
 					return vec;
 				}
