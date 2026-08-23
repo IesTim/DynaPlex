@@ -1,0 +1,29 @@
+{
+    "train_l_max": 5,
+    "max_order_size": 270,
+    "inventory_cap_multiplier": 3.0,
+    "simulation": {
+        "warmup_periods": 100,
+        "periods_per_trajectory": 2000,
+        "number_of_trajectories": 300
+    },
+    "policies": [
+        {"label": "gca_flatjoint_n20000_gen3_capped32", "type": "gca", "run_path": "flat_joint_mdp_config_wide_adjusted_b_flatjoint_dcl_config_k2_wideadjb_flatjoint_n20000_20260822_074005", "action_representation": "flat_joint", "generation": 3},
+        {"label": "cdi", "type": "cdi"},
+        {"label": "di", "type": "di"},
+        {"label": "si", "type": "si"},
+        {"label": "tbs", "type": "tbs"}
+    ],
+    "instances": {
+        "mode": "random",
+        "n_instances": 50,
+        "seed": 2024,
+        "mu_range": [2.0, 12.0],
+        "b_range": [0.1, 4.0],
+        "c_range": [0.1, 4.0],
+        "h_range": [1.0, 1.0],
+        "l_min": 1,
+        "l_max": 5
+    },
+    "output": "flatjoint_failure_wideadjb_n20000_gen3_comparison.json"
+}
