@@ -184,8 +184,25 @@ namespace {
             std::string run_path;
             policy_spec.Get("run_path", run_path);
             auto& system = dp.System();
-            auto full_path = system.filepath("dual_sourcing", "runs", run_path, "policy_final");
-            result.policy = dp.LoadPolicy(mdp, full_path);
+            if (policy_spec.HasKey("generation"))
+            {
+                // Load a specific mid-training checkpoint instead of policy_final - needed for
+                // runs stopped early (e.g. the flat_joint infeasibility demonstration, killed
+                // after gen 3 rather than running all 5 generations to make an already-clear
+                // point). Mirrors dual_sourcing_validate.cpp's eval_k2_gen mechanism.
+                int64_t generation;
+                policy_spec.Get("generation", generation);
+                VarGroup run_info = VarGroup::LoadFromFile(system.filepath("dual_sourcing", "runs", run_path, "run_info.json"));
+                std::string mdp_identifier;
+                run_info.Get("mdp_identifier", mdp_identifier);
+                auto gen_path = system.filepath(mdp_identifier, "dcl_policy_gen" + std::to_string(generation));
+                result.policy = dp.LoadPolicy(mdp, gen_path);
+            }
+            else
+            {
+                auto full_path = system.filepath("dual_sourcing", "runs", run_path, "policy_final");
+                result.policy = dp.LoadPolicy(mdp, full_path);
+            }
         }
         else if (type == "cdi")
         {
