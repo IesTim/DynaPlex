@@ -1,0 +1,32 @@
+{
+  "n_instances": 100,
+  "range": "wide_adjusted_b",
+  "source": "wideadjb_n100000_sequential_comparison.json",
+  "summary": {
+    "gca_sequential_n100000": {
+      "mean_cost": 20.418944846896927,
+      "mean_gap_vs_cdi_pct": -5.463447899347128,
+      "win_rate_vs_cdi_pct": 81.0
+    },
+    "di": {
+      "mean_cost": 27.35007714095776,
+      "mean_gap_vs_cdi_pct": 27.532882714309636,
+      "win_rate_vs_cdi_pct": 1.0
+    },
+    "si": {
+      "mean_cost": 23.05613536934813,
+      "mean_gap_vs_cdi_pct": 8.173851031490234,
+      "win_rate_vs_cdi_pct": 36.0
+    },
+    "tbs": {
+      "mean_cost": 21.917948442416055,
+      "mean_gap_vs_cdi_pct": 2.5594805597981276,
+      "win_rate_vs_cdi_pct": 34.0
+    },
+    "cdi": {
+      "mean_cost": 21.607710262706902,
+      "mean_gap_vs_cdi_pct": 0.0,
+      "win_rate_vs_cdi_pct": 50.0
+    }
+  }
+}

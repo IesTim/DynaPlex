@@ -1,0 +1,50 @@
+{
+  "train_l_max": 5,
+  "max_order_size": 270,
+  "inventory_cap_multiplier": 3.0,
+  "simulation": {
+    "warmup_periods": 0,
+    "periods_per_trajectory": 500,
+    "number_of_trajectories": 300
+  },
+  "policies": [
+    {
+      "label": "gca_estimated_mu",
+      "type": "gca",
+      "run_path": "sequential_mdp_config_wide_adjusted_b_dcl_config_k2_wideadjb_n100000_20260820_214806",
+      "action_representation": "sequential",
+      "oracle_mu_init": false
+    },
+    {
+      "label": "gca_oracle_mu",
+      "type": "gca",
+      "run_path": "sequential_mdp_config_wide_adjusted_b_dcl_config_k2_wideadjb_n100000_20260820_214806",
+      "action_representation": "sequential",
+      "oracle_mu_init": true
+    }
+  ],
+  "instances": {
+    "mode": "random",
+    "n_instances": 20,
+    "seed": 2024,
+    "mu_range": [
+      2.0,
+      12.0
+    ],
+    "b_range": [
+      0.1,
+      4.0
+    ],
+    "c_range": [
+      0.1,
+      4.0
+    ],
+    "h_range": [
+      1.0,
+      1.0
+    ],
+    "l_min": 1,
+    "l_max": 5
+  },
+  "output": "mu_estimation_horizon_500.json"
+}
