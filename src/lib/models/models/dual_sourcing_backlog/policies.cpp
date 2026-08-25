@@ -229,5 +229,38 @@ namespace DynaPlex::Models {
             q = std::min(q, mdp->MaxOrderSize);
             return q;
         }
+
+        AdaptiveKSourceCDIPolicy::AdaptiveKSourceCDIPolicy(std::shared_ptr<const MDP> mdp, const VarGroup& config): mdp{ mdp } {
+            if (mdp->K < 1)
+                throw DynaPlex::Error("AdaptiveKSourceCDIPolicy: K must be >= 1.");
+        }
+
+        int64_t AdaptiveKSourceCDIPolicy::GetAction(const MDP::State& state) const {
+            int64_t K = mdp->K;
+            double fractile = state.b / (state.b + state.h);
+
+            // state.l/state.c are ordered fastest/priciest (k=0) to slowest/cheapest (k=K-1) by
+            // construction (see MDP::GetInitialState). Processing sources in that order lets each
+            // one target NewsvendorFractile(l_k)/K while only ordering the gap left after faster
+            // sources' quantities (decided earlier in this same cascade) are already accounted for.
+            std::vector<int64_t> q(K, 0);
+            int64_t cumulative = state.total_inv;
+            for (int64_t k = 0; k < K; k++) {
+                int64_t target = std::max(int64_t(1),
+                    CachedAdaptiveNewsvendorFractile(state.mu_hat, state.sigma_hat, fractile, state.l[k]) / K);
+                int64_t qk = std::max(int64_t(0), target - cumulative);
+                qk = std::min(qk, mdp->MaxOrderSize);
+                q[k] = qk;
+                cumulative += qk;
+            }
+
+            if (mdp->action_representation == "sequential")
+                return q[state.current_source];
+
+            int64_t action = 0;
+            for (int64_t k = 0; k < K; k++)
+                action = action * (mdp->MaxOrderSize + 1) + q[k];
+            return action;
+        }
     }
 }

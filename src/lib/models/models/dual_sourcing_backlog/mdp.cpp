@@ -39,6 +39,7 @@ namespace DynaPlex::Models {
             registry.Register<BaseStockPolicy>("base_stock", "Standard single-channel order-up-to-S policy. The correct benchmark for K=1.");
             registry.Register<AdaptiveCDIPolicy>("adaptive_cdi", "CDI with S_r/S_e recomputed each decision from the state's own instance parameters. K=2 only; used as an instance-agnostic behavior/initial policy for wide-distribution DCL training.");
             registry.Register<AdaptiveBaseStockPolicy>("adaptive_base_stock", "base_stock with S recomputed each decision from the state's own instance parameters. K=1 only; used as an instance-agnostic behavior/initial policy for wide-distribution DCL training.");
+            registry.Register<AdaptiveKSourceCDIPolicy>("adaptive_cdi_k", "K-generic greedy generalization of adaptive_cdi for K>=1 (not a claim of optimality, see policies.h doc comment). Used as behavior/initial policy and evaluation baseline for the K-scaling stress test.");
         }
 
         MDP::MDP(const DynaPlex::VarGroup& config) {
@@ -97,10 +98,18 @@ namespace DynaPlex::Models {
                 fi.Get("b", fixed_b);
                 fi.Get("mu", fixed_mu);
                 fi.Get("sigma", fixed_sigma);
-                int64_t l_e, l_r;
-                fi.Get("l_e", l_e);
-                fi.Get("l_r", l_r);
-                fixed_l = {l_e, l_r};
+                // General-K form (fixed_instance.l = [l_0, ..., l_{K-1}], increasing) if present,
+                // otherwise the original K=2-only form (l_e/l_r) for backward compatibility with
+                // every existing config that uses it.
+                if (fi.HasKey("l"))
+                    fi.Get("l", fixed_l);
+                else
+                {
+                    int64_t l_e, l_r;
+                    fi.Get("l_e", l_e);
+                    fi.Get("l_r", l_r);
+                    fixed_l = {l_e, l_r};
+                }
                 fixed_c.resize(K);
                 std::vector<double> costs;
                 fi.Get("costs", costs);

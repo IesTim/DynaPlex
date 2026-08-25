@@ -2,6 +2,7 @@
 #include <string>
 #include <random>
 #include <cmath>
+#include <algorithm>
 #include "dynaplex/dynaplexprovider.h"
 #include "dynaplex/modelling/discretedist.h"
 #include "../../lib/models/models/dual_sourcing_backlog/tuning_utils.h"
@@ -333,6 +334,151 @@ namespace {
         output.SaveToFile(out_path, 2);
         system << "Done. Results saved to " << out_path << std::endl;
     }
+
+    // General-K mdp_config builder for the K-scaling stress test. Parallel to BuildMdpConfig
+    // rather than a generalization of it, to avoid any risk of regressing the K=2 "compare" mode
+    // used by every other result in this thesis. Instance schema: {K, mu, sigma, h, b,
+    // l: [l_0..l_{K-1}], c: [c_0..c_{K-1}]}.
+    VarGroup BuildMdpConfigK(const VarGroup& instance, int64_t K, int64_t train_l_max, int64_t max_order_size,
+        double inventory_cap_multiplier, const std::string& action_representation, double rollout_M)
+    {
+        VarGroup config;
+        config.Add("id", std::string("dual_sourcing_backlog"));
+        config.Add("K", K);
+
+        std::vector<int64_t> l;
+        std::vector<double> c;
+        instance.Get("l", l);
+        instance.Get("c", c);
+        config.Add("l_min", l.front());
+        // l_max must match the structural bound the network was trained with (train_l_max), not
+        // this instance's own l_r, otherwise the state's pipeline-vector length - and hence
+        // NumFlatFeatures() - won't match what the trained network expects.
+        config.Add("l_max", train_l_max);
+
+        double mu, sigma, h, b;
+        instance.Get("mu", mu); instance.Get("sigma", sigma);
+        instance.Get("h", h); instance.Get("b", b);
+
+        config.Add("min_h", h);   config.Add("max_h", h);
+        config.Add("min_b", b);   config.Add("max_b", b);
+        config.Add("min_c", *std::min_element(c.begin(), c.end()));
+        config.Add("max_c", *std::max_element(c.begin(), c.end()));
+        config.Add("min_mu", mu); config.Add("max_mu", mu);
+        config.Add("action_representation", action_representation);
+        config.Add("discount_factor", 1.0);
+        config.Add("max_order_size", max_order_size);
+        config.Add("inventory_cap_multiplier", inventory_cap_multiplier);
+        config.Add("rollout_M", rollout_M);
+
+        VarGroup fixed_instance;
+        fixed_instance.Add("h", h);
+        fixed_instance.Add("b", b);
+        fixed_instance.Add("mu", mu);
+        fixed_instance.Add("sigma", sigma);
+        fixed_instance.Add("l", l);
+        fixed_instance.Add("costs", c);
+        config.Add("fixed_instance", fixed_instance);
+
+        return config;
+    }
+
+    void RunCompareK(const std::string& spec_name)
+    {
+        auto& dp = DynaPlexProvider::Get();
+        auto& system = dp.System();
+
+        VarGroup spec = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", spec_name));
+
+        int64_t K, max_order_size, train_l_max;
+        double inventory_cap_multiplier = 3.0, rollout_M = 100;
+        spec.Get("K", K);
+        spec.Get("max_order_size", max_order_size);
+        spec.Get("train_l_max", train_l_max);
+        if (spec.HasKey("inventory_cap_multiplier")) spec.Get("inventory_cap_multiplier", inventory_cap_multiplier);
+        if (spec.HasKey("rollout_M")) spec.Get("rollout_M", rollout_M);
+
+        VarGroup sim_config;
+        spec.Get("simulation", sim_config);
+        sim_config.Set("return_raw_trajectories", true);
+
+        std::vector<VarGroup> policy_specs;
+        spec.Get("policies", policy_specs);
+        std::vector<VarGroup> instances;
+        spec.Get("instances", instances);
+
+        system << "dual_sourcing_eval compare_k: K=" << K << ", " << instances.size()
+               << " instances x " << policy_specs.size() << " policies" << std::endl;
+
+        std::vector<VarGroup> per_instance_results;
+        for (size_t i = 0; i < instances.size(); i++)
+        {
+            auto& instance = instances[i];
+            system << "instance " << (i + 1) << "/" << instances.size() << std::endl;
+            VarGroup instance_result;
+            instance_result.Add("instance_idx", static_cast<int64_t>(i));
+            instance_result.Add("instance", instance);
+
+            std::vector<VarGroup> policy_results;
+            for (auto& pspec : policy_specs)
+            {
+                std::string label, type, action_representation = "sequential";
+                pspec.Get("label", label);
+                pspec.Get("type", type);
+                if (pspec.HasKey("action_representation")) pspec.Get("action_representation", action_representation);
+
+                VarGroup mdp_config = BuildMdpConfigK(instance, K, train_l_max, max_order_size, inventory_cap_multiplier, action_representation, rollout_M);
+                DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
+
+                try
+                {
+                    DynaPlex::Policy policy;
+                    if (type == "gca")
+                    {
+                        std::string run_path;
+                        pspec.Get("run_path", run_path);
+                        auto full_path = system.filepath("dual_sourcing", "runs", run_path, "policy_final");
+                        policy = dp.LoadPolicy(mdp, full_path);
+                    }
+                    else if (type == "adaptive_cdi_k")
+                    {
+                        policy = mdp->GetPolicy("adaptive_cdi_k");
+                    }
+                    else
+                        throw DynaPlex::Error("compare_k: unknown policy type " + type);
+
+                    auto comparer = dp.GetPolicyComparer(mdp, sim_config);
+                    auto assessment = comparer.Assess(policy);
+                    VarGroup pres;
+                    pres.Add("label", label);
+                    pres.Add("mean", assessment);
+                    policy_results.push_back(pres);
+                    double mean_cost;
+                    assessment.Get("mean", mean_cost);
+                    system << "  " << label << ": " << mean_cost << std::endl;
+                }
+                catch (const DynaPlex::Error& e)
+                {
+                    system << "  " << label << " FAILED: " << e.what() << std::endl;
+                    VarGroup pres;
+                    pres.Add("label", label);
+                    pres.Add("error", std::string(e.what()));
+                    policy_results.push_back(pres);
+                }
+            }
+            instance_result.Add("policies", policy_results);
+            per_instance_results.push_back(instance_result);
+        }
+
+        VarGroup output;
+        output.Add("spec", spec);
+        output.Add("results", per_instance_results);
+        std::string output_name;
+        spec.Get("output", output_name);
+        auto out_path = system.filepath("dual_sourcing", "evaluation", output_name);
+        output.SaveToFile(out_path, 2);
+        system << "Done. Results saved to " << out_path << std::endl;
+    }
 }
 
 int main(int argc, char* argv[])
@@ -343,7 +489,7 @@ int main(int argc, char* argv[])
     if (argc < 3)
     {
         system << "Usage: dual_sourcing_eval <mode> <spec.json>" << std::endl;
-        system << "Modes: compare" << std::endl;
+        system << "Modes: compare, compare_k" << std::endl;
         return 1;
     }
 
@@ -352,6 +498,8 @@ int main(int argc, char* argv[])
 
     if (mode == "compare")
         RunCompare(spec_name);
+    else if (mode == "compare_k")
+        RunCompareK(spec_name);
     else
     {
         system << "Unknown mode: " << mode << std::endl;

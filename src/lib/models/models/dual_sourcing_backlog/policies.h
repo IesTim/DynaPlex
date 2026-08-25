@@ -74,5 +74,23 @@ namespace DynaPlex::Models {
             AdaptiveBaseStockPolicy(std::shared_ptr<const MDP> mdp, const VarGroup& config);
             int64_t GetAction(const MDP::State& state) const;
         };
+
+        // K-generic generalization of AdaptiveCDIPolicy for the K-scaling stress test (K>=2).
+        // Not a claim of optimality or a literature-validated K-source heuristic - AdaptiveCDIPolicy's
+        // exact cascade (S_e scaled by 1/(l_r-l_e+1), IP_e from the fast-window-only position) does not
+        // generalize cleanly past two sources. This uses a simpler, transparent cascade instead: each
+        // source k (ordered fastest/priciest at k=0 to slowest/cheapest at k=K-1, per the model's own
+        // dominance ordering) targets NewsvendorFractile(l_k)/K, and sources are processed fastest-first
+        // so each one only orders the gap left after faster sources' quantities (decided earlier in the
+        // same cascade) are accounted for. Reduces to a sensible single-source base-stock policy at K=1.
+        // Adaptive (recomputes from the state's own mu_hat/sigma_hat/h/b/l each decision) so it is usable
+        // as a DCL initial_policy across a distribution of K-source instances, mirroring
+        // AdaptiveCDIPolicy's role for K=2.
+        struct AdaptiveKSourceCDIPolicy {
+            std::shared_ptr<const MDP> mdp;
+
+            AdaptiveKSourceCDIPolicy(std::shared_ptr<const MDP> mdp, const VarGroup& config);
+            int64_t GetAction(const MDP::State& state) const;
+        };
     }
 }
