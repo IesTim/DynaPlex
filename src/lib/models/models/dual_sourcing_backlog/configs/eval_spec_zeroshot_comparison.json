@@ -1,0 +1,44 @@
+{
+  "train_l_max": 5,
+  "max_order_size": 270,
+  "inventory_cap_multiplier": 3.0,
+  "simulation": {
+    "warmup_periods": 100,
+    "periods_per_trajectory": 2000,
+    "number_of_trajectories": 300
+  },
+  "policies": [
+    {
+      "label": "gca_zeroshot_n50000",
+      "type": "gca",
+      "run_path": "sequential_mdp_config_wideadjb_zeroshot_baseline_dcl_config_k2_wideadjb_n50000_20260824_203239",
+      "action_representation": "sequential"
+    },
+    {
+      "label": "gca_rangetrained_n100000",
+      "type": "gca",
+      "run_path": "sequential_mdp_config_wide_adjusted_b_dcl_config_k2_wideadjb_n100000_20260820_214806",
+      "action_representation": "sequential"
+    },
+    {
+      "label": "cdi",
+      "type": "cdi"
+    }
+  ],
+  "instances": {
+    "mode": "explicit",
+    "list": [
+      {
+        "mu": 7.0,
+        "sigma": 3.5,
+        "h": 1.0,
+        "b": 2.0,
+        "c_e": 2.5,
+        "c_r": 0.5,
+        "l_e": 2,
+        "l_r": 4
+      }
+    ]
+  },
+  "output": "zeroshot_cost_of_generalization.json"
+}
