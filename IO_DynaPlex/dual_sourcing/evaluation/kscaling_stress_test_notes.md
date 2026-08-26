@@ -1,6 +1,8 @@
 # K-scaling stress test: does sequential decomposition's linear scaling hold up?
 
-Date: 2026-08-25
+Date: 2026-08-25/26. Extended overnight (2026-08-26) to K=6,7 after the initial K=2-5 run
+surfaced a mild, ambiguous signal at K=5 - see "Extension to K=6,7" below for the update that
+changes the headline finding.
 
 ## Purpose
 
@@ -41,7 +43,7 @@ performance), 5 generations**, same network architecture at every K ([256,128,12
 layers). Evaluated against `adaptive_cdi_k` on 15 random within-range instances per K (seed
 4242+K), 200 trajectories x 1500 periods each.
 
-## Results
+## Results (K=2..5, initial run)
 
 | K | GCA-DS mean cost | adaptive_cdi_k mean cost | gap | win rate | training wall-clock | final argmax agreement |
 |---|---|---|---|---|---|---|
@@ -74,19 +76,84 @@ this is the beginning of real strain that would become visible at K=6+, or just 
 single small-N run per K (n=1 training run per K, no replication), cannot be determined from this
 data alone.
 
+## Extension to K=6,7 (overnight, 2026-08-26)
+
+Same protocol exactly (N=5000, 5 generations, `adaptive_cdi_k` baseline, 15 random within-range
+instances, same architecture). Motivated directly by the K=5 "watch this" signal above.
+
+| K | GCA-DS mean cost | adaptive_cdi_k mean cost | gap | win rate | training wall-clock | final argmax agreement |
+|---|---|---|---|---|---|---|
+| 6 | 23.26 | 61.48 | -54.0% | 15/15 | 2h26m42s | 100% |
+| 7 | 33.24 | 88.50 | -46.5% | **12/15** | 2h58m27s | 100% |
+
+**K=6 looked fine - even better than K=5 (biggest relative win margin of any K tested, -54.0%) -
+but K=7 is where a real crack appears.** For the first time anywhere in this stress test (K=2
+through 6, 75 evaluated instances, zero losses), GCA-DS actually loses to the K-generic baseline
+on 3 of 15 instances at K=7, with one loss as large as +27.0%. GCA-DS's own absolute cost also
+jumps sharply from K=6 to K=7 (23.26 -> 33.24, +42.9%, by far the largest step-to-step increase
+anywhere in the K=2..7 range - compare the K=2..6 increases, all under 11%).
+
+**What characterizes the 3 losing instances: low backlog cost b.** All three losses occur at
+b in {0.10, 0.35, 0.42} - the three smallest b values among the 15 instances tested. Correlation
+between b and gap across all 15 K=7 instances: **corr(b, gap) = -0.879**, a strong relationship in
+a small sample. This is a plausible, mechanistically sensible failure mode, not an unexplained
+anomaly: N=5000 is small and fixed across all K by design, so the same sample budget has to cover
+a state/action space that grows with K; the low-b corner is plausibly where correct behavior
+differs most from what a "typical" instance in the training distribution looks like (lower
+backlog penalty rewards more conservative ordering), making it the first region to run out of
+effective sample coverage as K grows. This maps directly onto the "sample complexity" difficulty
+identified theoretically in Methodology Sec.4 ("a dataset of fixed size ... provides less evidence
+per class as K grows") - K=7 with N=5000 appears to be roughly where that theoretical concern
+starts to bite empirically, at least in this low-b corner.
+
+**Also notable: training diagnostics did not flag this.** Argmax agreement is still a clean 100%
+at K=7's final generation - the same as every other K tested, and nothing like the near-0%
+collapse seen in the flat_joint failure. This is a materially different, subtler failure mode than
+flat_joint's: the network trains "cleanly" by its own internal diagnostic, but its deployed
+performance still degrades on part of the instance distribution. Worth stating explicitly: a
+healthy-looking training run does not guarantee healthy deployed performance once K is large
+enough relative to N - the two diagnostics diverge exactly where this stress test finds a real
+crack.
+
+**Caveat, as with the K=5 finding: n=1 training run per K, no replication.** Whether the K=6 dip
+back to "no losses" and the K=7 jump is a stable, reproducible K=7-specific effect, or partly an
+artifact of drawing one particular training run per K, cannot be fully separated without repeated
+runs at the same K with different seeds - not attempted here given the time budget. The
+correlation with b within K=7's own 15-instance sample is real regardless of that caveat, since it
+doesn't depend on comparing across different training runs.
+
 ## Bottom line for the paper
 
-The honest headline: **sequential decomposition's linear-in-K scaling held up through K=5 in this
-stress test** - performance stayed strong (never worse than the baseline on any of 60 evaluated
-instances across all K), training diagnostics stayed healthy (100% argmax agreement throughout,
-no sign of the collapse seen in flat_joint), and wall-clock cost grew linearly as the theory
-predicts. There is a mild uptick in GCA-DS's own absolute cost at K=5 worth mentioning as a
-"watch this" observation for future work, but this stress test did not find the point where linear
-scaling stops being enough within the K=2..5 range and the 1-day compute budget available.
+**Revised headline (supersedes the K=2-5-only conclusion above): sequential decomposition's linear
+scaling holds up cleanly through K=6, then shows a genuine crack at K=7** - not a catastrophic
+collapse like flat_joint's (win rate is still 12/15, not 0/15; argmax agreement stays at 100%; the
+absolute cost increase, while the largest step seen, is not an order-of-magnitude jump), but a
+real, characterizable failure: losses appear for the first time, concentrated in the low-backlog-
+cost region, consistent with the sample-complexity mechanism predicted theoretically in
+Methodology Sec.4. This is arguably a *better* result for the paper than either extreme (no
+breakdown found, or an immediate collapse): it locates a specific, mechanistically-explained
+boundary (K=7 at N=5000, low-b corner) rather than leaving the question unresolved, and it
+directly validates one of the three theoretical difficulties (sample complexity) the Methodology
+chapter predicts in advance of seeing this data.
+
+## Memory finding: the flat_joint uncapped-enumeration probe was OOM-killed
+
+Attempted as a follow-up to the flat_joint failure result (see
+`flatjoint_action_space_failure_notes.md`), to get a measured per-sample timing for the
+"infeasible without capping" argument instead of only an extrapolation from the capped run's
+slowdown. At N=500, a single generation, full action enumeration (no `SimulateOnlyPromisingActions`
+capping) on the same wide-adjusted-b range: the process was killed by the Linux OOM killer after
+consuming **260GB of resident memory (anon-rss) on this 251GB machine** - it did not run slowly to
+completion, it exhausted all available system memory outright. Confirmed via
+`journalctl -k`: `Out of memory: Killed process ... (dual_sourcing_g) total-vm:297355792kB,
+anon-rss:260207528kB`. This strengthens the flat_joint infeasibility argument beyond the wall-clock
+case already made: uncapped rollout evaluation over 73441 joint actions is not merely slow, it is
+not memory-feasible on this hardware even at a tiny N=500, a single generation, and is a stronger,
+more vivid, more easily-communicated number for the paper than a multi-day timing extrapolation.
 
 ## Raw data
 
-`kscaling_K{2,3,4,5}_comparison.json` (15 instances x 2 policies each, full per-trajectory
+`kscaling_K{2,3,4,5,6,7}_comparison.json` (15 instances x 2 policies each, full per-trajectory
 costs). Training logs (per-generation argmax agreement, cost improvement, wall-clock) are in the
 run console output only, not yet extracted to a structured JSON - could be added if the paper
 wants an exact per-generation diagnostic table.

@@ -13,7 +13,7 @@
     {
       "label": "gca_K6",
       "type": "gca",
-      "run_path": "PLACEHOLDER"
+      "run_path": "sequential_mdp_config_kscaling_K6_dcl_config_kscaling_K6_20260826_005422"
     },
     {
       "label": "adaptive_cdi_k",

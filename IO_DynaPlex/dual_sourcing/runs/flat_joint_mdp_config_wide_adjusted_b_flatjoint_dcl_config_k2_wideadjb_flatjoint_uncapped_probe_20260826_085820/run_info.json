@@ -1,0 +1,52 @@
+{
+    "action_representation": "flat_joint",
+    "dcl_config": "dcl_config_k2_wideadjb_flatjoint_uncapped_probe.json",
+    "dcl_config_full": {
+        "N": 500,
+        "SimulateOnlyPromisingActions": false,
+        "initial_policy": {
+            "id": "adaptive_cdi"
+        },
+        "nn_architecture": {
+            "hidden_layers": [
+                256,
+                128,
+                128,
+                128
+            ],
+            "type": "mlp"
+        },
+        "nn_training": {
+            "early_stopping_patience": 15,
+            "max_training_epochs": 20,
+            "mini_batch_size": 128
+        },
+        "num_gens": 1,
+        "retrain_lastgen_only": false
+    },
+    "git_commit": "d911860a18da7560776c4d09a575ea367cd87677",
+    "git_tree_clean": false,
+    "mdp_config": "mdp_config_wide_adjusted_b_flatjoint.json",
+    "mdp_config_full": {
+        "K": 2,
+        "action_representation": "flat_joint",
+        "discount_factor": 1.0,
+        "id": "dual_sourcing_backlog",
+        "inventory_cap_multiplier": 3.0,
+        "l_max": 5,
+        "l_min": 1,
+        "max_b": 4.0,
+        "max_c": 4.0,
+        "max_h": 1.0,
+        "max_mu": 12.0,
+        "max_order_size": 270,
+        "min_b": 0.0,
+        "min_c": 0.0,
+        "min_h": 1.0,
+        "min_mu": 2.0,
+        "rollout_M": 100
+    },
+    "mdp_identifier": "dual_sourcing_backlog_wj0rpYkajcvcMcDPghP6-VVwOs6Gtz0VIODoY85MDlI__",
+    "num_gens": 1,
+    "timestamp": "20260826_085820"
+}
