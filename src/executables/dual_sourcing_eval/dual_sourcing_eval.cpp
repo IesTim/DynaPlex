@@ -479,6 +479,99 @@ namespace {
         output.SaveToFile(out_path, 2);
         system << "Done. Results saved to " << out_path << std::endl;
     }
+
+    // Structural analysis (K=2 only): drives a trajectory forward under CDI's own actions (so
+    // the system stays in realistic, representative states rather than an untested policy
+    // possibly running away), and at every period's two sub-decisions, records what CDI actually
+    // chose alongside what GCA-DS *would* have chosen from that exact same state - the standard
+    // "trace both policies against the same realistic trajectory" comparison, following the
+    // pattern already validated in dual_sourcing_validate.cpp's DebugTraceK2Actions, just looped
+    // over every period rather than a handful of snapshots. Uses the type-erased Trajectory/
+    // SetAction/IncorporateAction interface throughout (DynaPlex::MDP/Policy are fully
+    // type-erased - there is no direct GetAction(State) available on them from application code).
+    void RunStructural(const std::string& spec_name)
+    {
+        auto& dp = DynaPlexProvider::Get();
+        auto& system = dp.System();
+
+        VarGroup spec = VarGroup::LoadFromFile(system.filepath("mdp_config_examples", "dual_sourcing_backlog", "configs", spec_name));
+
+        int64_t train_l_max, max_order_size, num_periods, seed;
+        double inventory_cap_multiplier = 3.0;
+        spec.Get("train_l_max", train_l_max);
+        spec.Get("max_order_size", max_order_size);
+        spec.Get("num_periods", num_periods);
+        spec.Get("seed", seed);
+        if (spec.HasKey("inventory_cap_multiplier")) spec.Get("inventory_cap_multiplier", inventory_cap_multiplier);
+
+        VarGroup instance, tuning_sim_config;
+        spec.Get("instance", instance);
+        spec.Get("tuning_simulation", tuning_sim_config);
+        std::string run_path;
+        spec.Get("run_path", run_path);
+
+        VarGroup mdp_config = BuildMdpConfig(instance, train_l_max, max_order_size, inventory_cap_multiplier, "sequential", false);
+        DynaPlex::MDP mdp = dp.GetMDP(mdp_config);
+
+        auto full_path = system.filepath("dual_sourcing", "runs", run_path, "policy_final");
+        DynaPlex::Policy gca_policy = dp.LoadPolicy(mdp, full_path);
+
+        double mu, sigma, h, b;
+        int64_t l_e, l_r;
+        instance.Get("mu", mu); instance.Get("sigma", sigma);
+        instance.Get("h", h); instance.Get("b", b);
+        instance.Get("l_e", l_e); instance.Get("l_r", l_r);
+        int64_t max_val = CdiSearchBound(mu, sigma, b, h, l_r);
+        VarGroup cdi_tuned = TuneCDI(mdp, tuning_sim_config, mu, sigma, b, h, l_r, l_e, max_val);
+        int64_t S_r, S_e;
+        cdi_tuned.Get("S_r", S_r); cdi_tuned.Get("S_e", S_e);
+        VarGroup cdi_pc; cdi_pc.Add("id", std::string("cdi")); cdi_pc.Add("S_r", S_r); cdi_pc.Add("S_e", S_e);
+        DynaPlex::Policy cdi_policy = mdp->GetPolicy(cdi_pc);
+        system << "Tuned CDI: S_r=" << S_r << " S_e=" << S_e << std::endl;
+
+        DynaPlex::Trajectory traj(0);
+        traj.RNGProvider.SeedEventStreams(false, seed, 0);
+        mdp->InitiateState({ &traj, 1 });
+
+        std::vector<VarGroup> rows;
+        for (int64_t period = 0; period < num_periods; period++)
+        {
+            mdp->IncorporateUntilAction({ &traj, 1 });
+
+            // Source 0 (expedited) decision.
+            cdi_policy->SetAction({ &traj, 1 });
+            int64_t cdi_q_e = traj.NextAction;
+            gca_policy->SetAction({ &traj, 1 });
+            int64_t gca_q_e = traj.NextAction;
+            mdp->IncorporateAction({ &traj, 1 }, cdi_policy);
+
+            // Source 1 (regular) decision - state now reflects cdi_q_e already placed.
+            cdi_policy->SetAction({ &traj, 1 });
+            int64_t cdi_q_r = traj.NextAction;
+            gca_policy->SetAction({ &traj, 1 });
+            int64_t gca_q_r = traj.NextAction;
+            mdp->IncorporateAction({ &traj, 1 }, cdi_policy);
+
+            VarGroup row;
+            row.Add("period", period);
+            row.Add("gca_q_expedited", gca_q_e);
+            row.Add("gca_q_regular", gca_q_r);
+            row.Add("cdi_q_expedited", cdi_q_e);
+            row.Add("cdi_q_regular", cdi_q_r);
+            rows.push_back(row);
+        }
+        system << "Traced " << num_periods << " periods." << std::endl;
+
+        VarGroup output;
+        output.Add("spec", spec);
+        output.Add("cdi_tuned", cdi_tuned);
+        output.Add("rows", rows);
+        std::string output_name;
+        spec.Get("output", output_name);
+        auto out_path = system.filepath("dual_sourcing", "evaluation", output_name);
+        output.SaveToFile(out_path, 2);
+        system << "Done. Results saved to " << out_path << std::endl;
+    }
 }
 
 int main(int argc, char* argv[])
@@ -489,7 +582,7 @@ int main(int argc, char* argv[])
     if (argc < 3)
     {
         system << "Usage: dual_sourcing_eval <mode> <spec.json>" << std::endl;
-        system << "Modes: compare, compare_k" << std::endl;
+        system << "Modes: compare, compare_k, structural" << std::endl;
         return 1;
     }
 
@@ -500,6 +593,8 @@ int main(int argc, char* argv[])
         RunCompare(spec_name);
     else if (mode == "compare_k")
         RunCompareK(spec_name);
+    else if (mode == "structural")
+        RunStructural(spec_name);
     else
     {
         system << "Unknown mode: " << mode << std::endl;
