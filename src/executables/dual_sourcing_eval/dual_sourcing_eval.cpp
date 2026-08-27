@@ -562,7 +562,16 @@ namespace {
         }
         system << "Traced " << num_periods << " periods." << std::endl;
 
+        double cdi_cost = EvaluatePolicyTuning(mdp, cdi_policy, tuning_sim_config);
+        double gca_cost = EvaluatePolicyTuning(mdp, gca_policy, tuning_sim_config);
+        double gap_pct = (gca_cost - cdi_cost) / cdi_cost * 100.0;
+        system << "CDI cost: " << cdi_cost << "  GCA-DS cost: " << gca_cost
+               << "  gap: " << gap_pct << "%" << std::endl;
+
         VarGroup output;
+        output.Add("cdi_cost", cdi_cost);
+        output.Add("gca_cost", gca_cost);
+        output.Add("gap_vs_cdi_pct", gap_pct);
         output.Add("spec", spec);
         output.Add("cdi_tuned", cdi_tuned);
         output.Add("rows", rows);

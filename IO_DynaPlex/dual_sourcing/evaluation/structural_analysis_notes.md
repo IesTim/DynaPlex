@@ -72,7 +72,70 @@ backlog, expensive differentiation - GCA-DS learns to selectively ignore an opti
 hedges with), and smallest where CDI's structure already happens to be close to right (expensive
 backlog, similar costs - both policies converge to similar, aggressive dual-sourcing behavior).
 
+## Extension: systematic 32-instance grid (2026-08-27)
+
+The two-instance comparison above is a proof of concept - it shows the pattern exists at two
+extremes, but not whether it's a real, continuous relationship or an artifact of two convenient
+picks. Extended `dual_sourcing_eval structural` to also compute the aggregate performance gap
+(`EvaluatePolicyTuning` on both policies, same instance) alongside the action trace, then ran a
+full grid: `b` in {0.1, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0} x `c_e` in {0.75, 1.5, 2.5, 3.5} (`c_r`
+fixed at 0.5), `mu`=8, `l`=(2,4) held fixed - 32 instances, 1500-period trace + a lighter
+100 traj x 1000 period evaluation each (each instance took ~5-7 seconds; the whole grid finished
+in about 3 minutes). Spec generator + raw grid files: `eval_spec_structural_grid_*.json` /
+`structural_grid_*.json`; summary table extracted to `/tmp/structural_grid_summary.json` (not
+committed - regenerable from the 32 raw files).
+
+### The key result: structural divergence predicts performance advantage, not just accompanies it
+
+**corr(expedited-usage gap [GCA-DS minus CDI], performance gap vs. CDI) = 0.672** across all 32
+instances. The more GCA-DS's behavior diverges from CDI's - specifically, the more *less* often it
+uses the expedited source than CDI does - the bigger GCA-DS's cost advantage over CDI. This is the
+finding the two-instance version could only illustrate; the grid actually establishes it as a
+real, quantified relationship. See `structural_usage_vs_performance.pdf`.
+
+### The full picture is richer than the two-instance version suggested
+
+- **corr(b, performance gap) = 0.664**, **corr(b, GCA-DS expedited-usage frequency) = 0.470**,
+  **corr(cost differentiation, GCA-DS expedited-usage frequency) = -0.736**. Cost differentiation
+  drives *how often GCA-DS uses the expensive source* (strong, as expected); `b` drives both usage
+  frequency and the performance gap, but more weakly than differentiation drives usage.
+- **At very low b (0.1), GCA-DS abandons the expedited source completely regardless of price gap**
+  (0.0-0.2% usage across all four `c_e` values tested), while CDI still uses it 22-61% of the time.
+  This generalizes the original "big win" instance from a single anecdote to an entire row of the
+  grid: near-zero backlog cost reliably triggers complete abandonment of the fast source, not just
+  in the one instance originally picked.
+- **A genuine surprise the two-instance version could not have shown: at moderate-to-high b with a
+  *small* price gap (c_e=0.75), GCA-DS actually uses the expedited source *more often* than CDI
+  does** (usage gap turns positive: +2.3, +7.0, +8.0, +8.8, +7.7 percentage points for b=1.5
+  through 4.0). GCA-DS is not simply "always more conservative than CDI" - when backlog is
+  expensive and the two sources cost almost the same, hedging aggressively with *both* sources
+  becomes the better strategy, and GCA-DS leans into that harder than CDI's fixed thresholds do.
+  This nuance was invisible from the original 2-instance comparison and only shows up once the
+  full (b, cost-differentiation) plane is mapped.
+- **The relationship between cost differentiation and the performance gap is not simply monotonic
+  once b is fixed** (corr(cost differentiation, performance gap) = -0.140 overall, much weaker
+  than the b or usage-gap correlations) - e.g. at b=1.0 the gap goes -8.73% -> -4.94% -> -8.12% ->
+  -15.70% as c_e increases from 0.75 to 3.5, not a straight line. The two variables interact rather
+  than contributing additively; b is the more reliable single predictor of performance gap, cost
+  differentiation is the more reliable single predictor of *how* GCA-DS's behavior diverges from
+  CDI's.
+
+### Bottom line for the paper
+
+The grid upgrades the structural analysis from "here is an interesting anecdote at two points"
+to "here is a real, quantified, 32-instance relationship between how differently the learned
+policy behaves and how much better it performs" - the single strongest piece of evidence in the
+whole thesis that GCA-DS's advantage over CDI is mechanistically explainable rather than
+incidental. The b=0.1 row (complete abandonment of the expedited source, regardless of price gap)
+and the small-price-gap/high-b corner (GCA-DS hedging *more* than CDI) are both worth featuring
+explicitly - together they show GCA-DS adapting its qualitative strategy in both directions
+depending on the instance, not applying one fixed correction to CDI's behavior.
+
 ## Raw data
 
-`structural_bigwin_trace.json`, `structural_hardcorner_trace.json` (2000 periods each, full
-per-period action pairs for both policies).
+`structural_bigwin_trace.json`, `structural_hardcorner_trace.json` (original 2-instance
+comparison, 2000 periods each). `structural_grid_*.json` (32 files, the systematic b x cost_e
+grid, 1500-period trace + performance gap each). Figures: `structural_expedited_usage.pdf` (the
+original 2-instance bar chart), `structural_grid_heatmaps.pdf` (performance gap and usage gap
+across the full grid), `structural_usage_vs_performance.pdf` (the key scatter establishing the
+0.672 correlation).

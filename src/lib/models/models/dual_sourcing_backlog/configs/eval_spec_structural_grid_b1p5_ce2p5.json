@@ -1,0 +1,24 @@
+{
+  "train_l_max": 5,
+  "max_order_size": 270,
+  "inventory_cap_multiplier": 3.0,
+  "instance": {
+    "mu": 8.0,
+    "sigma": 4.0,
+    "h": 1.0,
+    "b": 1.5,
+    "c_e": 2.5,
+    "c_r": 0.5,
+    "l_e": 2,
+    "l_r": 4
+  },
+  "tuning_simulation": {
+    "warmup_periods": 100,
+    "periods_per_trajectory": 1000,
+    "number_of_trajectories": 100
+  },
+  "run_path": "sequential_mdp_config_wide_adjusted_b_dcl_config_k2_wideadjb_n100000_20260820_214806",
+  "num_periods": 1500,
+  "seed": 20260827,
+  "output": "structural_grid_b1p5_ce2p5.json"
+}
